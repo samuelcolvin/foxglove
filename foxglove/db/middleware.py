@@ -9,6 +9,7 @@ class PgMiddleware(BaseHTTPMiddleware):
         self.check = check
 
         from ..glove import glove
+
         self.glove = glove
 
     async def dispatch(self, request, call_next):

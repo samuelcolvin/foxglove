@@ -14,9 +14,7 @@ __all__ = 'create_pg_pool', 'prepare_database', 'reset_database', 'lenient_conn'
 async def create_pg_pool(settings: BaseSettings) -> asyncpg.BuildPgPool:
     await prepare_database(settings, False)
     return await asyncpg.create_pool_b(
-        settings.pg_dsn,
-        min_size=settings.pg_pool_min_size,
-        max_size=settings.pg_pool_max_size,
+        settings.pg_dsn, min_size=settings.pg_pool_min_size, max_size=settings.pg_pool_max_size,
     )
 
 
@@ -55,7 +53,7 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
                 from pg_stat_activity
                 where pg_stat_activity.datname = $1 AND pid <> pg_backend_pid();
                 """,
-                settings.pg_name
+                settings.pg_name,
             )
             logger.debug('attempting to create database "%s"...', settings.pg_name)
             try:

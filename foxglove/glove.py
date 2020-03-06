@@ -3,9 +3,8 @@ import asyncio
 import httpx
 from buildpg.asyncpg import BuildPgPool
 
-from .settings import BaseSettings
 from .db import create_pg_pool
-
+from .settings import BaseSettings
 
 __all__ = ('glove',)
 
@@ -20,10 +19,7 @@ class Glove:
         self.http = httpx.AsyncClient()
 
     async def shutdown(self):
-        await asyncio.gather(
-            self.pg.close(),
-            self.http.aclose(),
-        )
+        await asyncio.gather(self.pg.close(), self.http.aclose())
 
 
 glove = Glove()
