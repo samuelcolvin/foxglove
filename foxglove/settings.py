@@ -68,7 +68,7 @@ class BaseSettings(PydanticBaseSettings):
     csrf_cross_origin_paths: List[Pattern] = []
     cross_origin_origins: List[Pattern] = []
 
-    cookie_name = 'atoolbox-app'
+    cookie_name = 'foxglove'
 
     grecaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
     # this is the test key from https://developers.google.com/recaptcha/docs/faq,

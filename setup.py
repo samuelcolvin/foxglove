@@ -42,7 +42,7 @@ setup(
     packages=['foxglove', 'foxglove.db'],
     entry_points="""
         [console_scripts]
-        foxglove=foxglove.cli:cli
+        foxglove=foxglove.__main__:cli
     """,
     python_requires='>=3.8',
     zip_safe=True,

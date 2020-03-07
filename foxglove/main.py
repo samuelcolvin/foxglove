@@ -25,9 +25,5 @@ class FoxGlove(Starlette):
             if settings.pg_dsn:
                 middleware += [Middleware(PgMiddleware)]
         super().__init__(
-            middleware=middleware,
-            routes=routes or [],
-            on_startup=[glove.startup],
-            on_shutdown=[glove.shutdown],
-            **kwargs,
+            middleware=middleware, routes=routes, on_startup=[glove.startup], on_shutdown=[glove.shutdown], **kwargs,
         )
