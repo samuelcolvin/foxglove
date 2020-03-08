@@ -1,29 +1,25 @@
-from typing import List, Type, Union
+import asyncio
 
-from starlette.applications import Starlette
-from starlette.middleware import Middleware
-from starlette.routing import Route
+import httpx
+from buildpg.asyncpg import BuildPgPool
 
-from .db import PgMiddleware
-from .glove import glove
+from .db import create_pg_pool
 from .settings import BaseSettings
 
+__all__ = ('glove',)
 
-class FoxGlove(Starlette):
-    def __init__(
-        self,
-        settings: Union[BaseSettings, Type[BaseSettings]],
-        routes: List[Route],
-        middleware: List[Middleware] = None,
-        **kwargs,
-    ):
-        if not isinstance(settings, BaseSettings):
-            settings = settings()
-        glove.settings = settings
-        if middleware is None:
-            middleware = []
-            if settings.pg_dsn:
-                middleware += [Middleware(PgMiddleware)]
-        super().__init__(
-            middleware=middleware, routes=routes, on_startup=[glove.startup], on_shutdown=[glove.shutdown], **kwargs,
-        )
+
+class Glove:
+    settings: BaseSettings
+    pg: BuildPgPool
+    http: httpx.AsyncClient
+
+    async def startup(self):
+        self.pg = await create_pg_pool(self.settings)
+        self.http = httpx.AsyncClient(timeout=self.settings.http_client_timeout)
+
+    async def shutdown(self):
+        await asyncio.gather(self.pg.close(), self.http.aclose())
+
+
+glove = Glove()

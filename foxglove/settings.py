@@ -3,6 +3,8 @@ from typing import List, Optional, Pattern
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
+from starlette.routing import Route
+from uvicorn.importer import import_from_string
 
 try:
     from arq.connections import RedisSettings
@@ -32,8 +34,10 @@ GREPAPTCHA_TEST_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 
 
 class BaseSettings(PydanticBaseSettings):
+    routes: Optional[str] = None
     worker_func: Optional[str] = None
     patch_paths: List[str] = []
+    web_workers: Optional[int] = None
 
     sql_path: Path = 'models.sql'
     pg_dsn: Optional[str] = pg_dsn_default
@@ -62,6 +66,10 @@ class BaseSettings(PydanticBaseSettings):
     @property
     def sql(self):
         return self.sql_path.read_text()
+
+    def get_routes(self) -> List[Route]:
+        routes = self.routes or f'{self.__module__}:routes'
+        return import_from_string(routes)
 
     @property
     def _pg_dsn_parsed(self):

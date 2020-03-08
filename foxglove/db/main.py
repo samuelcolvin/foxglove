@@ -45,6 +45,7 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
                 # don't drop connections and try creating a db if it already exists and we're not overwriting
                 exists = await conn.fetchval('select 1 from pg_database where datname=$1', settings.pg_name)
                 if exists:
+                    logger.info('database already exists ✓')
                     return False
 
             await conn.execute(

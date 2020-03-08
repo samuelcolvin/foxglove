@@ -4,11 +4,6 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from foxglove import BaseSettings, glove
-from foxglove.main import FoxGlove
-
-
-class Settings(BaseSettings):
-    pass
 
 
 class FoxGloveState:
@@ -25,4 +20,8 @@ async def homepage(request: Request):
     return JSONResponse({'hello': v, 'response_status': r.status_code})
 
 
-app = FoxGlove(Settings(), [Route('/', homepage)])
+routes = [Route('/', homepage)]
+
+
+class Settings(BaseSettings):
+    pass

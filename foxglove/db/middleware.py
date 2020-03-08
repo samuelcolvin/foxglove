@@ -8,7 +8,7 @@ class PgMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.check = check
 
-        from ..glove import glove
+        from ..main import glove
 
         self.glove = glove
 

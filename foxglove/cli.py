@@ -14,11 +14,8 @@ from pydantic.env_settings import BaseSettings as PydanticBaseSettings
 from uvicorn.importer import import_from_string, ImportFromStringError
 from uvicorn.main import run as uvicorn_run
 
-from .logs import setup_logging
-
 from .settings import BaseSettings
 from .version import VERSION
-from .main import FoxGlove
 
 logger = logging.getLogger('foxglove.cli')
 
@@ -35,8 +32,20 @@ def web():
     """
     logger.info('running web server at %s...', settings.port)
     # wait_for_services(settings)
-    app = FoxGlove(settings, [])
-    uvicorn_run(app, host='0.0.0.0', port=settings.port)
+    os.environ['foxglove_settings_path'] = SETTINGS_PATH
+    uvicorn_run('foxglove.asgi:app', host='0.0.0.0', port=settings.port, workers=settings.web_workers)
+
+
+@cli.command()
+def dev():
+    """
+    Run the web server using uvicorn for development
+    """
+    logger.info('running web server at %s in dev mode...', settings.port)
+    os.environ['foxglove_settings_path'] = SETTINGS_PATH
+    uvicorn_run(
+        'foxglove.asgi:app', host='127.0.0.1', port=settings.port, reload=True, reload_dirs=[os.getcwd(), ROOT_PATH],
+    )
 
 
 @cli.command()
@@ -167,10 +176,6 @@ def callback(
             '"ATOOLBOX_SETTINGS" or "settings.Settings"'
         ),
     ),
-    log: str = typer.Option(
-        os.getenv('ATOOLBOX_LOG_NAME', 'app'),
-        help='Root name of logs for the app, defaults to to the environment variable "ATOOLBOX_LOG_NAME" or "app"',
-    ),
     root: str = typer.Option(
         os.getenv('ATOOLBOX_ROOT_DIR', '.'),
         help='root directory to run command from, defaults to to the environment variable "ATOOLBOX_ROOT_DIR" or "."',
@@ -180,7 +185,6 @@ def callback(
     if {'--help', '--version'} & set(sys.argv):
         return
     global ROOT_PATH, SETTINGS_PATH, settings
-    setup_logging(debug=False, main_logger_name=log)
 
     sys.path.append(os.getcwd())
     ROOT_PATH = Path(root).resolve()

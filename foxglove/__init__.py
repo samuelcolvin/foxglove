@@ -1,5 +1,5 @@
 # flake8: noqa
-from .glove import glove
+from .main import glove
 from .settings import BaseSettings
 from .version import VERSION
 
