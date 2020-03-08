@@ -6,9 +6,7 @@ from setuptools import setup
 description = 'Tools for Starlette'
 THIS_DIR = Path(__file__).resolve().parent
 try:
-    long_description = '\n\n'.join(
-        [THIS_DIR.joinpath('README.md').read_text(), THIS_DIR.joinpath('HISTORY.md').read_text()]
-    )
+    long_description = THIS_DIR.joinpath('README.md').read_text()
 except FileNotFoundError:
     long_description = description
 
@@ -20,6 +18,7 @@ setup(
     version=str(version.VERSION),
     description=description,
     long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python',
@@ -47,14 +46,15 @@ setup(
     python_requires='>=3.8',
     zip_safe=True,
     install_requires=[
-        'starlette>=0.13.2',
         'arq>=0.18',
+        'asyncpg>=0.17.0',
+        'starlette>=0.13.2',
+        'buildpg>=0.2.1',
         'pydantic>=1.4',
         'sentry-sdk>=0.14',
+        'typer>=0.0.8',
         'uvicorn>=0.11.3',
         'uvloop>=0.14.0',
-        'asyncpg>=0.17.0',
-        'buildpg>=0.2.1',
     ],
-    extras_require={'all': ['cryptography>=2.4.1', 'ipython>=7.7.0']},
+    extras_require={'extra': ['ipython>=7.7.0']},
 )

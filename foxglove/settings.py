@@ -27,22 +27,12 @@ except ImportError:
 else:
     pg_dsn_default = 'postgres://postgres@localhost:5432/app'
 
-
-try:
-    from cryptography.fernet import Fernet
-except ImportError:
-    auth_key_default = None
-else:
-    # generate_key is used to avoid a public default value ever being used in production
-    auth_key_default = Fernet.generate_key().decode()
-
 # see https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
 GREPAPTCHA_TEST_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 
 
 class BaseSettings(PydanticBaseSettings):
-    worker_func: str = None
-    create_app: str = 'main.create_app'
+    worker_func: Optional[str] = None
     patch_paths: List[str] = []
 
     sql_path: Path = 'models.sql'
@@ -55,20 +45,14 @@ class BaseSettings(PydanticBaseSettings):
     redis_settings: Optional[RedisSettings] = redis_settings_default
     port: int = 8000
 
-    auth_key: str = auth_key_default
-
-    max_request_size = 10 * 1024 ** 2  # 10MB
     locale = 'en_US.utf8'
 
     http_client_timeout = 10
-    create_http_client = True
 
     csrf_ignore_paths: List[Pattern] = []
     csrf_upload_paths: List[Pattern] = []
     csrf_cross_origin_paths: List[Pattern] = []
     cross_origin_origins: List[Pattern] = []
-
-    cookie_name = 'foxglove'
 
     grecaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
     # this is the test key from https://developers.google.com/recaptcha/docs/faq,

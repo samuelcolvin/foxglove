@@ -16,7 +16,7 @@ class Glove:
 
     async def startup(self):
         self.pg = await create_pg_pool(self.settings)
-        self.http = httpx.AsyncClient()
+        self.http = httpx.AsyncClient(timeout=self.settings.http_client_timeout)
 
     async def shutdown(self):
         await asyncio.gather(self.pg.close(), self.http.aclose())

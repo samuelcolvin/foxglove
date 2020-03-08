@@ -116,26 +116,3 @@ class DummyPgPool(_LockedExecute):
 
     def __repr__(self) -> str:
         return f'<DummyPgPool {self._conn._addr} {self._conn._params}>'
-
-
-async def update_enums(enums, conn):
-    """
-    update sql enums from python enums, this requires @patch(direct=True) on the patch
-    """
-    for name, enum in enums.items():
-        for t in enum:
-            await conn.execute(f"ALTER TYPE {name} ADD VALUE IF NOT EXISTS '{t.value}'")
-
-
-async def run_sql_section(chunk_name, sql, conn):
-    """
-    Run a section of a sql string (eg. settings.sql) based on tags in the following format:
-        -- { <chunk name>
-        <sql to run>
-        -- } <chunk name>
-    """
-    m = re.search(f'^-- *{{+ *{chunk_name}(.*)^-- *}}+ *{chunk_name}', sql, flags=re.DOTALL | re.MULTILINE)
-    if not m:
-        raise RuntimeError(f'chunk with name "{chunk_name}" not found')
-    sql = m.group(1).strip(' \n')
-    await conn.execute(sql)
