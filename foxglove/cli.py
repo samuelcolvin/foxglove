@@ -14,6 +14,8 @@ from pydantic.env_settings import BaseSettings as PydanticBaseSettings
 from uvicorn.importer import import_from_string, ImportFromStringError
 from uvicorn.main import run as uvicorn_run
 
+from foxglove.logs import setup_logging
+from .main import glove
 from .settings import BaseSettings
 from .version import VERSION
 
@@ -33,7 +35,7 @@ def web():
     logger.info('running web server at %s...', settings.port)
     # wait_for_services(settings)
     os.environ['foxglove_settings_path'] = SETTINGS_PATH
-    uvicorn_run('foxglove.asgi:app', host='0.0.0.0', port=settings.port, workers=settings.web_workers)
+    uvicorn_run(settings.asgi_path, host='0.0.0.0', port=settings.port, workers=settings.web_workers, log_config=None)
 
 
 @cli.command()
@@ -44,7 +46,12 @@ def dev():
     logger.info('running web server at %s in dev mode...', settings.port)
     os.environ['foxglove_settings_path'] = SETTINGS_PATH
     uvicorn_run(
-        'foxglove.asgi:app', host='127.0.0.1', port=settings.port, reload=True, reload_dirs=[os.getcwd(), ROOT_PATH],
+        settings.asgi_path,
+        host='127.0.0.1',
+        port=settings.port,
+        reload=True,
+        reload_dirs=[os.getcwd(), ROOT_PATH],
+        log_config=None,
     )
 
 
@@ -178,6 +185,7 @@ def callback(
     ),
     root: str = typer.Option(
         os.getenv('ATOOLBOX_ROOT_DIR', '.'),
+        '-r',
         help='root directory to run command from, defaults to to the environment variable "ATOOLBOX_ROOT_DIR" or "."',
     ),
 ) -> None:
@@ -185,6 +193,7 @@ def callback(
     if {'--help', '--version'} & set(sys.argv):
         return
     global ROOT_PATH, SETTINGS_PATH, settings
+    setup_logging()
 
     sys.path.append(os.getcwd())
     ROOT_PATH = Path(root).resolve()
@@ -205,6 +214,8 @@ def callback(
 
     settings = settings_cls()
     locale.setlocale(locale.LC_ALL, getattr(settings, 'locale', 'en_US.utf8'))
+
+    glove.settings = settings
 
 
 class CliError(typer.Exit):

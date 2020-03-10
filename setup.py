@@ -50,6 +50,7 @@ setup(
         'asyncpg>=0.17.0',
         'starlette>=0.13.2',
         'buildpg>=0.2.1',
+        'httpx>=0.11.1',
         'pydantic>=1.4',
         'sentry-sdk>=0.14',
         'typer>=0.0.8',

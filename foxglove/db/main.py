@@ -94,11 +94,11 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
 
 def reset_database(settings: BaseSettings):
     if not (os.getenv('CONFIRM_DATABASE_RESET') == 'confirm' or input('Confirm database reset? [yN] ') == 'y'):
-        print('cancelling')
+        logger.info('cancelling')
     else:
-        print('resetting database...')
+        logger.info('resetting database...')
         asyncio.run(prepare_database(settings, True))
-        print('done.')
+        logger.info('done.')
 
 
 async def lenient_conn(settings: BaseSettings, with_db=True):

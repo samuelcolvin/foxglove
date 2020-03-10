@@ -29,15 +29,15 @@ except ImportError:
 else:
     pg_dsn_default = 'postgres://postgres@localhost:5432/app'
 
-# see https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
-GREPAPTCHA_TEST_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
-
 
 class BaseSettings(PydanticBaseSettings):
+    asgi_path: str = 'foxglove.asgi:app'
     routes: Optional[str] = None
-    worker_func: Optional[str] = None
-    patch_paths: List[str] = []
     web_workers: Optional[int] = None
+
+    worker_func: Optional[str] = None
+
+    patch_paths: List[str] = []
 
     sql_path: Path = 'models.sql'
     pg_dsn: Optional[str] = pg_dsn_default
@@ -59,7 +59,9 @@ class BaseSettings(PydanticBaseSettings):
     cross_origin_origins: List[Pattern] = []
 
     grecaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
-    # this is the test key from https://developers.google.com/recaptcha/docs/faq,
+
+    # this is the test key from https://developers.google.com/recaptcha/docs/faq, or
+    # https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
     # you'll need to change it for production
     grecaptcha_secret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 
