@@ -7,3 +7,5 @@ htmlcov/
 .coverage
 /todo/
 /sandbox/
+/build/
+/dist/

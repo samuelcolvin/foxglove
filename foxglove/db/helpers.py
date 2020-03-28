@@ -1,5 +1,4 @@
 import asyncio
-import re
 from typing import Optional
 
 from asyncpg import Connection

@@ -1,7 +1,7 @@
 import asyncio
 from functools import wraps
 from time import time
-from typing import Optional, Any
+from typing import Optional
 
 from starlette.templating import Jinja2Templates as _Jinja2Templates
 
@@ -12,7 +12,7 @@ try:
 except ImportError:  # pragma: nocover
     jinja2 = None  # type: ignore
 
-reload_sha = 'f3c14fc6cf15e85950b3621be2ec879025738248'
+reload_sha = 'fbc87301a2470263e3ba45e56c7089f286a84a4e'
 reload_snippet = f'<script src="https://rawcdn.githack.com/samuelcolvin/foxglove/{reload_sha}/reload.js"></script>'
 
 
@@ -48,13 +48,17 @@ class FoxgloveTemplates(_Jinja2Templates):
     def render(self, template_name: str):
         def view_decorator(view):
             if asyncio.iscoroutinefunction(view):
+
                 @wraps(view)
                 async def view_wrapper(request):
                     return self._return_template(request, template_name, await view(request))
+
             else:
+
                 @wraps(view)
                 def view_wrapper(request):
                     return self._return_template(request, template_name, view(request))
+
             return view_wrapper
 
         return view_decorator

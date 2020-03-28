@@ -1,9 +1,10 @@
 import asyncio
 import logging
+
 from starlette.endpoints import WebSocketEndpoint
 from starlette.responses import Response
-from starlette.routing import WebSocketRoute, Route
-from watchgod import awatch, DefaultWatcher
+from starlette.routing import Route, WebSocketRoute
+from watchgod import DefaultWatcher, awatch
 
 logger = logging.getLogger('foxglove.cli')
 

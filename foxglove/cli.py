@@ -11,10 +11,11 @@ from typing import Callable, List
 import typer
 import uvloop
 from pydantic.env_settings import BaseSettings as PydanticBaseSettings
-from uvicorn.importer import import_from_string, ImportFromStringError
+from uvicorn.importer import ImportFromStringError, import_from_string
 from uvicorn.main import run as uvicorn_run
 
 from foxglove.logs import setup_logging
+
 from .main import glove
 from .settings import BaseSettings
 from .version import VERSION
@@ -45,17 +46,10 @@ def dev():
     """
     logger.info('running web server at %s in dev mode...', settings.port)
     os.environ.update(
-        foxglove_dev_mode='TRUE',
-        foxglove_settings_path=SETTINGS_PATH,
-        foxglove_root_path=str(ROOT_PATH),
+        foxglove_dev_mode='TRUE', foxglove_settings_path=SETTINGS_PATH, foxglove_root_path=str(ROOT_PATH),
     )
     uvicorn_run(
-        settings.asgi_path,
-        host='127.0.0.1',
-        port=settings.port,
-        reload=True,
-        reload_dirs=[ROOT_PATH],
-        log_config=None,
+        settings.asgi_path, host='127.0.0.1', port=settings.port, reload=True, reload_dirs=[ROOT_PATH], log_config=None,
     )
 
 
