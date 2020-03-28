@@ -22,11 +22,15 @@ if settings.dev_mode:
     foxglove_root_path = os.environ.get('foxglove_root_path')
 
     if foxglove_root_path:
-        routes.append(reload_endpoint(foxglove_root_path))
+        routes += reload_endpoint(foxglove_root_path)
     else:
-        raise RuntimeError('dev_mode mode enabled but "foxglove_root_path" not found, can\'t add reload_endpoint')
+        raise RuntimeError('dev_mode enabled but "foxglove_root_path" not found, can\'t add the reload endpoint')
 
 
 app = Starlette(
-    middleware=middleware, routes=settings.get_routes(), on_startup=[glove.startup], on_shutdown=[glove.shutdown],
+    debug=settings.dev_mode,
+    middleware=middleware,
+    routes=settings.get_routes(),
+    on_startup=[glove.startup],
+    on_shutdown=[glove.shutdown],
 )

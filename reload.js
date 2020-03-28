@@ -1,9 +1,32 @@
 // reload the current page based on file changes
 
-// is "?v={{ range(1, 51) | random }}" required? apparently not
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-function reload_page () {
+function reload_page() {
   location.reload(true)
+}
+
+const back_off_times = [200, 500, 1000, 2000, 5000, 5000, 5000, 5000, 30000, 30000]
+async function wait_for_server (to_run) {
+  for (let back_off of back_off_times) {
+    try {
+      const r = await fetch('/.devtools/up/')
+      if (r.status !== 200) {
+        console.debug(`unexpected response from '/.devtools/up/': ${r.status}, waiting ${back_off} and trying again...`)
+        await sleep(back_off)
+        continue
+      }
+      await r.text()
+    } catch (error) {
+      // generally TypeError: failed to fetch
+      console.debug(`failed to connect to '/.devtools/up/', waiting ${back_off} and trying again...`)
+      await sleep(back_off)
+      continue
+    }
+    to_run()
+    return
+  }
+  console.warn('page reload timed out, could not connect')
 }
 
 class ReloadWebsocket {
@@ -15,10 +38,10 @@ class ReloadWebsocket {
   }
 
   connect = () => {
-    console.debug('websocket connecting...')
     this._connected = false
     const proto = location.protocol.replace('http', 'ws')
-    const url = `${proto}//${window.location.host}/.devtools/reload/`
+    const url = `${proto}//${window.location.host}/.devtools/reload-ws/`
+    console.debug(`websocket connecting to "${url}"...`)
     try {
       this._socket = new WebSocket(url)
     } catch (error) {
@@ -46,8 +69,8 @@ class ReloadWebsocket {
       return
     }
     if (this._connected) {
-      console.debug('files changed, reloading', event)
-      reload_page()
+      console.debug('files changed, reloading')
+      wait_for_server(reload_page)
     }
   }
 
@@ -59,8 +82,11 @@ class ReloadWebsocket {
   _on_close = event => {
     clearInterval(this._clear_connected)
     if (this._connected) {
-      console.debug('websocket closed, reloading', event)
-      reload_page()
+      // slight delay so this doesn't run as the page is manually reloaded
+      setTimeout(() => {
+        console.debug('websocket closed, prompting reload')
+        wait_for_server(reload_page)
+      }, 100)
     } else {
       console.debug('websocket closed, reconnecting in 2s...', event)
       setTimeout(this.connect, 2000)
@@ -68,4 +94,7 @@ class ReloadWebsocket {
   }
 }
 
-const reload = new ReloadWebsocket()
+wait_for_server(() => {
+  window.dev_reloader = new ReloadWebsocket()
+})
+

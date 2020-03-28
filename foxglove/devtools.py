@@ -1,7 +1,8 @@
 import asyncio
 import logging
 from starlette.endpoints import WebSocketEndpoint
-from starlette.routing import WebSocketRoute
+from starlette.responses import Response
+from starlette.routing import WebSocketRoute, Route
 from watchgod import awatch, DefaultWatcher
 
 logger = logging.getLogger('foxglove.cli')
@@ -9,6 +10,10 @@ logger = logging.getLogger('foxglove.cli')
 
 class IgnorePythonWatcher(DefaultWatcher):
     ignored_file_regexes = DefaultWatcher.ignored_file_regexes + (r'\.py$', r'\.pyx$', r'\.pyd$')
+
+
+def devtools_up(request):
+    return Response(b'server up\n', media_type='text/plain')
 
 
 def reload_endpoint(watch_path: str):
@@ -40,6 +45,9 @@ def reload_endpoint(watch_path: str):
             try:
                 await self._watch_task
             except asyncio.CancelledError:
-                logger.debug('file watch cancelled')
+                logger.debug('file watcher cancelled')
 
-    return WebSocketRoute('/.devtools/reload/', ReloadWs, name='devtools-reload')
+    return [
+        WebSocketRoute('/.devtools/reload-ws/', ReloadWs, name='devtools-reload'),
+        Route('/.devtools/up/', devtools_up, methods=['GET']),
+    ]
