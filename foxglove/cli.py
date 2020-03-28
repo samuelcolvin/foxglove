@@ -44,13 +44,17 @@ def dev():
     Run the web server using uvicorn for development
     """
     logger.info('running web server at %s in dev mode...', settings.port)
-    os.environ['foxglove_settings_path'] = SETTINGS_PATH
+    os.environ.update(
+        foxglove_dev_mode='TRUE',
+        foxglove_settings_path=SETTINGS_PATH,
+        foxglove_root_path=str(ROOT_PATH),
+    )
     uvicorn_run(
         settings.asgi_path,
         host='127.0.0.1',
         port=settings.port,
         reload=True,
-        reload_dirs=[os.getcwd(), ROOT_PATH],
+        reload_dirs=[ROOT_PATH],
         log_config=None,
     )
 
@@ -213,7 +217,9 @@ def callback(
         raise CliError(f'settings "{settings_cls}" (from "{settings_path}"), is not a valid Settings class')
 
     settings = settings_cls()
-    locale.setlocale(locale.LC_ALL, getattr(settings, 'locale', 'en_US.utf8'))
+    settings_locale = getattr(settings, 'locale', None)
+    if settings_locale:
+        locale.setlocale(locale.LC_ALL, settings_locale)
 
     glove.settings = settings
 

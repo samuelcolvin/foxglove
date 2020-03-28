@@ -31,6 +31,7 @@ else:
 
 
 class BaseSettings(PydanticBaseSettings):
+    dev_mode: bool = False
     asgi_path: str = 'foxglove.asgi:app'
     routes: Optional[str] = None
     web_workers: Optional[int] = None
@@ -49,7 +50,7 @@ class BaseSettings(PydanticBaseSettings):
     redis_settings: Optional[RedisSettings] = redis_settings_default
     port: int = 8000
 
-    locale = 'en_US.utf8'
+    locale: Optional[str] = None
 
     http_client_timeout = 10
 
@@ -102,4 +103,8 @@ class BaseSettings(PydanticBaseSettings):
         )
 
     class Config:
-        fields = {'pg_dsn': {'env': 'DATABASE_URL'}, 'redis_settings': {'env': ['REDISCLOUD_URL', 'REDIS_URL']}}
+        fields = {
+            'pg_dsn': {'env': 'DATABASE_URL'},
+            'redis_settings': {'env': ['REDISCLOUD_URL', 'REDIS_URL']},
+            'dev_mode': {'env': ['foxglove_dev_mode']},
+        }
