@@ -1,6 +1,7 @@
 from typer.testing import CliRunner
 
 from foxglove.cli import cli
+
 runner = CliRunner()
 
 

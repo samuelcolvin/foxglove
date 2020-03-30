@@ -17,7 +17,7 @@ middleware = []
 if settings.pg_dsn:
     middleware += [Middleware(PgMiddleware)]
 
-routes = settings.get_routes()
+routes = list(settings.get_routes())
 if settings.dev_mode:
     foxglove_root_path = os.environ.get('foxglove_root_path')
 
@@ -30,7 +30,7 @@ if settings.dev_mode:
 app = Starlette(
     debug=settings.dev_mode,
     middleware=middleware,
-    routes=settings.get_routes(),
+    routes=routes,
     on_startup=[glove.startup],
     on_shutdown=[glove.shutdown],
 )
