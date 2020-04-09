@@ -56,5 +56,5 @@ setup(
         'typer>=0.1.0',
         'uvicorn>=0.11.3',
     ],
-    extras_require={'extra': ['ipython>=7.7.0']},
+    extras_require={'extra': ['ipython>=7.7.0', 'watchgod>=0.6']},
 )

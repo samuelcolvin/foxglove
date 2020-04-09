@@ -1,8 +1,10 @@
+import secrets
 from pathlib import Path
 from typing import List, Optional, Pattern
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
+from starlette.middleware import Middleware
 from starlette.routing import Route
 from uvicorn.importer import import_from_string
 
@@ -34,6 +36,7 @@ class BaseSettings(PydanticBaseSettings):
     dev_mode: bool = False
     asgi_path: str = 'foxglove.asgi:app'
     routes: Optional[str] = None
+    middleware: Optional[str] = None
     web_workers: Optional[int] = None
 
     worker_func: Optional[str] = None
@@ -50,6 +53,10 @@ class BaseSettings(PydanticBaseSettings):
 
     redis_settings: Optional[RedisSettings] = redis_settings_default
     port: int = 8000
+
+    # secrets.token_hex() is used to avoid a public default value ever being used in production
+    secret_key: str = secrets.token_hex()
+    session_cookie: str = 'foxglove'
 
     locale: Optional[str] = None
 
@@ -74,6 +81,16 @@ class BaseSettings(PydanticBaseSettings):
     def get_routes(self) -> List[Route]:
         routes = self.routes or f'{self.__module__}:routes'
         return import_from_string(routes)
+
+    def get_middleware(self) -> List[Middleware]:
+        if self.middleware:
+            return import_from_string(self.middleware)
+        elif self.pg_dsn:
+            from .db import PgMiddleware
+
+            return [Middleware(PgMiddleware)]
+        else:
+            return []
 
     @property
     def _pg_dsn_parsed(self):

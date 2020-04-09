@@ -1,11 +1,10 @@
 import os
 
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 from uvicorn.importer import import_from_string
 
-from .db import PgMiddleware
 from .devtools import reload_endpoint
+from .exceptions import HttpRedirect, redirect_handler
 from .main import glove
 from .settings import BaseSettings
 
@@ -13,9 +12,6 @@ Settings = import_from_string(os.environ['foxglove_settings_path'])
 settings: BaseSettings = Settings()
 
 glove.settings = settings
-middleware = []
-if settings.pg_dsn:
-    middleware += [Middleware(PgMiddleware)]
 
 routes = list(settings.get_routes())
 if settings.dev_mode:
@@ -27,10 +23,13 @@ if settings.dev_mode:
         raise RuntimeError('dev_mode enabled but "foxglove_root_path" not found, can\'t add the reload endpoint')
 
 
+exception_handlers = {HttpRedirect: redirect_handler}
+
 app = Starlette(
     debug=settings.dev_mode,
-    middleware=middleware,
     routes=routes,
+    middleware=list(settings.get_middleware()),
+    exception_handlers=exception_handlers,
     on_startup=[glove.startup],
     on_shutdown=[glove.shutdown],
 )

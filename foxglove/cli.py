@@ -49,7 +49,7 @@ def dev():
         foxglove_dev_mode='TRUE', foxglove_settings_path=SETTINGS_PATH, foxglove_root_path=str(ROOT_PATH),
     )
     uvicorn_run(
-        settings.asgi_path, host='127.0.0.1', port=settings.port, reload=True, reload_dirs=[ROOT_PATH], log_config=None,
+        settings.asgi_path, debug=True, host='127.0.0.1', port=settings.port, reload=True, reload_dirs=[ROOT_PATH]
     )
 
 
