@@ -16,7 +16,7 @@ format:
 .PHONY: lint
 lint:
 	flake8 foxglove/ tests/
-	$(isort) --check-only
+	$(isort) --check-only -df
 	$(black) --check
 
 .PHONY: test
