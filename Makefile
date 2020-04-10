@@ -6,7 +6,7 @@ black = black -S -l 120 --target-version py37 foxglove tests
 install:
 	pip install -U setuptools pip
 	pip install -U -r requirements.txt
-	pip install -U -e .
+	pip install -U -e .[extra]
 
 .PHONY: format
 format:
