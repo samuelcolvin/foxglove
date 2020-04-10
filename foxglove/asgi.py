@@ -23,13 +23,11 @@ if settings.dev_mode:
         raise RuntimeError('dev_mode enabled but "foxglove_root_path" not found, can\'t add the reload endpoint')
 
 
-exception_handlers = {HttpRedirect: redirect_handler}
-
 app = Starlette(
     debug=settings.dev_mode,
     routes=routes,
     middleware=list(settings.get_middleware()),
-    exception_handlers=exception_handlers,
+    exception_handlers=dict(settings.get_exception_handlers()),
     on_startup=[glove.startup],
     on_shutdown=[glove.shutdown],
 )

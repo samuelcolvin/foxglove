@@ -1,6 +1,6 @@
 import secrets
 from pathlib import Path
-from typing import List, Optional, Pattern
+from typing import List, Optional, Pattern, Dict, Any, Union, Type, Callable
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
@@ -37,6 +37,7 @@ class BaseSettings(PydanticBaseSettings):
     asgi_path: str = 'foxglove.asgi:app'
     routes: Optional[str] = None
     middleware: Optional[str] = None
+    exception_handlers: Optional[str] = None
     web_workers: Optional[int] = None
 
     worker_func: Optional[str] = None
@@ -56,7 +57,7 @@ class BaseSettings(PydanticBaseSettings):
 
     # secrets.token_hex() is used to avoid a public default value ever being used in production
     secret_key: str = secrets.token_hex()
-    session_cookie: str = 'foxglove'
+    cookie_name: str = 'foxglove'
 
     locale: Optional[str] = None
 
@@ -91,6 +92,13 @@ class BaseSettings(PydanticBaseSettings):
             return [Middleware(PgMiddleware)]
         else:
             return []
+
+    def get_exception_handlers(self) -> Dict[Union[int, Type[Exception]], Callable]:
+        if self.exception_handlers:
+            return import_from_string(self.exception_handlers)
+        else:
+            from .exceptions import HttpRedirect, redirect_handler
+            return {HttpRedirect: redirect_handler}
 
     @property
     def _pg_dsn_parsed(self):

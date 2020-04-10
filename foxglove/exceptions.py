@@ -11,7 +11,7 @@ except ImportError:  # pragma: no cover
 __all__ = (
     'HttpRedirect',
     'redirect_handler',
-    'HttpUserError',
+    'HttpMessageError',
     'HttpOk',
     'HttpCreated',
     'HttpAccepted',
@@ -27,7 +27,7 @@ __all__ = (
 
 
 class HttpRedirect(Exception):
-    def __init__(self, location: str, *, status: int = 307):
+    def __init__(self, location: str, *, status: int = 302):
         super().__init__(f'{status} redirect to {location!r}')
         self.status = status
         self.location = location
@@ -37,7 +37,7 @@ async def redirect_handler(request: Request, exc: HttpRedirect):
     return RedirectResponse(exc.location, status_code=exc.status)
 
 
-class HttpUserError(Exception):
+class HttpMessageError(Exception):
     status: int
     custom_reason: str
 
@@ -57,39 +57,39 @@ class HttpUserError(Exception):
         return repr(self)
 
 
-class HttpOk(HttpUserError):
+class HttpOk(HttpMessageError):
     status = 200
 
 
-class HttpCreated(HttpUserError):
+class HttpCreated(HttpMessageError):
     status = 201
 
 
-class HttpAccepted(HttpUserError):
+class HttpAccepted(HttpMessageError):
     status = 202
 
 
-class HttpBadRequest(HttpUserError):
+class HttpBadRequest(HttpMessageError):
     status = 400
 
 
-class HttpUnauthorized(HttpUserError):
+class HttpUnauthorized(HttpMessageError):
     status = 401
 
 
-class HttpPaymentRequired(HttpUserError):
+class HttpPaymentRequired(HttpMessageError):
     status = 402
 
 
-class HttpForbidden(HttpUserError):
+class HttpForbidden(HttpMessageError):
     status = 403
 
 
-class HttpNotFound(HttpUserError):
+class HttpNotFound(HttpMessageError):
     status = 404
 
 
-class HttpMethodNotAllowed(HttpUserError):
+class HttpMethodNotAllowed(HttpMessageError):
     status = 405
 
     def __init__(self, message, allowed_methods, *, headers=None):
@@ -98,10 +98,10 @@ class HttpMethodNotAllowed(HttpUserError):
         super().__init__(message, details={'allowed_methods': allowed_methods}, headers=headers)
 
 
-class HttpConflict(HttpUserError):
+class HttpConflict(HttpMessageError):
     status = 409
 
 
-class Http470(HttpUserError):
+class Http470(HttpMessageError):
     status = 470
     custom_reason = 'Invalid user input'
