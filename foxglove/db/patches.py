@@ -9,6 +9,7 @@ from ..settings import BaseSettings
 
 logger = logging.getLogger('foxglove.patch')
 patches = []
+__all__ = 'run_patch', 'patch', 'update_enums', 'run_sql_section'
 
 
 @dataclass

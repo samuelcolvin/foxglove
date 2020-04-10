@@ -100,7 +100,7 @@ def _get_auto_command() -> Callable[[], None]:
 
 
 @cli.command()
-def patch(patch_name: str = None, live: bool = False, extra_args: List[str] = None):
+def patch(patch_name: str = typer.Argument(None), live: bool = False, extra_args: List[str] = None):
     """
     Run a patch function to update or modify the database.
     """
