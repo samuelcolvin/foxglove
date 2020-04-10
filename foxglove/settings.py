@@ -1,9 +1,11 @@
+import os
 import secrets
 from pathlib import Path
-from typing import List, Optional, Pattern, Dict, Any, Union, Type, Callable
+from typing import Callable, Dict, List, Optional, Pattern, Type, Union
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
+from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.routing import Route
 from uvicorn.importer import import_from_string
@@ -98,7 +100,33 @@ class BaseSettings(PydanticBaseSettings):
             return import_from_string(self.exception_handlers)
         else:
             from .exceptions import HttpRedirect, redirect_handler
+
             return {HttpRedirect: redirect_handler}
+
+    def create_app(self) -> Starlette:
+        routes = list(self.get_routes())
+        if self.dev_mode:
+            foxglove_root_path = os.environ.get('foxglove_root_path')
+
+            from .devtools import reload_endpoint
+
+            if foxglove_root_path:
+                routes += reload_endpoint(foxglove_root_path)
+            else:
+                raise RuntimeError(
+                    'dev_mode enabled but "foxglove_root_path" not found, can\'t add the reload endpoint'
+                )
+
+        from .main import glove
+
+        return Starlette(
+            debug=self.dev_mode,
+            routes=routes,
+            middleware=list(self.get_middleware()),
+            exception_handlers=dict(self.get_exception_handlers()),
+            on_startup=[glove.startup],
+            on_shutdown=[glove.shutdown],
+        )
 
     @property
     def _pg_dsn_parsed(self):
