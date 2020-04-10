@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Callable, List
 
 import typer
-import uvloop
 from pydantic.env_settings import BaseSettings as PydanticBaseSettings
 from uvicorn.importer import ImportFromStringError, import_from_string
 from uvicorn.main import run as uvicorn_run
@@ -65,7 +64,13 @@ def worker():
     """
     Run the worker command from settings.worker_func.
     """
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    try:
+        import uvloop
+    except ImportError:
+        pass
+    else:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+
     if settings.worker_func:
         logger.info('running worker...')
         worker_func: Callable[[BaseSettings], None] = import_from_string(settings.worker_func)
