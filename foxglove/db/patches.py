@@ -2,8 +2,9 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass
+from enum import Enum
 from importlib import import_module
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple, Type
 
 from ..settings import BaseSettings
 
@@ -108,7 +109,7 @@ async def rerun_sql(*, conn, settings, **kwargs):
     await conn.execute(settings.sql)
 
 
-async def update_enums(enums, conn):
+async def update_enums(enums: Dict[str, Type[Enum]], conn):
     """
     update sql enums from python enums, this requires @patch(direct=True) on the patch
     """
