@@ -34,17 +34,20 @@ class FoxgloveTemplates(_Jinja2Templates):
         @jinja2.contextfunction
         def static_url(context: dict, path: str) -> str:
             request = context['request']
-            url = request.url_for(context['static_route_name'], path=path)
-            if context['dev_mode']:
-                url += f'?t={time() * 1000:0.0f}'
-            return url
+            try:
+                static_route_name = context.get('static_route_name', 'static')
+                url = request.url_for(static_route_name, path=path)
+                if context['dev_mode']:
+                    url += f'?t={time() * 1000:0.0f}'
+                return url
+            except KeyError:
+                return f'/static/{path}'
 
         env = super().get_env(directory)
         env.globals.update(
             prompt_reload=prompt_reload,
             static_url=static_url,
             dev_mode=glove.settings.dev_mode,
-            static_route_name='static',
         )
         return env
 
