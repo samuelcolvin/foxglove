@@ -15,11 +15,15 @@ class Glove:
     http: httpx.AsyncClient
 
     async def startup(self):
-        self.pg = await create_pg_pool(self.settings)
-        self.http = httpx.AsyncClient(timeout=self.settings.http_client_timeout)
+        if not hasattr(self, 'pg'):
+            self.pg = await create_pg_pool(self.settings)
+        if not hasattr(self, 'http'):
+            self.http = httpx.AsyncClient(timeout=self.settings.http_client_timeout)
 
     async def shutdown(self):
         await asyncio.gather(self.pg.close(), self.http.aclose())
+        del self.pg
+        del self.http
 
 
 glove = Glove()
