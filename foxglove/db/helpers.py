@@ -129,10 +129,12 @@ class SyncDb:
         return self._loop.run_until_complete(self._conn.execute_b(*args, **kwargs))
 
     def fetch(self, *args, **kwargs):
-        return self._loop.run_until_complete(self._conn.fetch(*args, **kwargs))
+        v = self._loop.run_until_complete(self._conn.fetch(*args, **kwargs))
+        return [dict(r) for r in v]
 
     def fetch_b(self, *args, **kwargs):
-        return self._loop.run_until_complete(self._conn.fetch_b(*args, **kwargs))
+        v = self._loop.run_until_complete(self._conn.fetch_b(*args, **kwargs))
+        return [dict(r) for r in v]
 
     def fetchval(self, *args, **kwargs):
         return self._loop.run_until_complete(self._conn.fetchval(*args, **kwargs))
@@ -141,7 +143,9 @@ class SyncDb:
         return self._loop.run_until_complete(self._conn.fetchval_b(*args, **kwargs))
 
     def fetchrow(self, *args, **kwargs):
-        return self._loop.run_until_complete(self._conn.fetchrow(*args, **kwargs))
+        v = self._loop.run_until_complete(self._conn.fetchrow(*args, **kwargs))
+        return None if v is None else dict(v)
 
     def fetchrow_b(self, *args, **kwargs):
-        return self._loop.run_until_complete(self._conn.fetchrow_b(*args, **kwargs))
+        v = self._loop.run_until_complete(self._conn.fetchrow_b(*args, **kwargs))
+        return None if v is None else dict(v)
