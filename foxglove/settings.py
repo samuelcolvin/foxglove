@@ -36,6 +36,7 @@ else:
 
 class BaseSettings(PydanticBaseSettings):
     dev_mode: bool = False
+    test_mode: bool = False
     asgi_path: str = 'foxglove.asgi:app'
     routes: Optional[str] = None
     middleware: Optional[str] = None

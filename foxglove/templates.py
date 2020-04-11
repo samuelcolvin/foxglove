@@ -13,6 +13,8 @@ try:
 except ImportError:  # pragma: nocover
     jinja2 = None  # type: ignore
 
+__all__ = 'FoxgloveTemplates', 'FoxgloveTestTemplates'
+
 reload_sha = 'fbc87301a2470263e3ba45e56c7089f286a84a4e'
 reload_snippet = f'<script src="https://rawcdn.githack.com/samuelcolvin/foxglove/{reload_sha}/reload.js"></script>'
 
@@ -70,6 +72,8 @@ class FoxgloveTemplates(_Jinja2Templates):
         context['request'] = request
         return self.TemplateResponse(template_name, context)
 
+
+class FoxgloveTestTemplates(FoxgloveTemplates):
     # from here on is just a hacky workaround for https://github.com/encode/starlette/issues/472
     def TemplateResponse(
         self,
