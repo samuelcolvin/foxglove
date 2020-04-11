@@ -1,13 +1,13 @@
 import asyncio
 from typing import Optional
 
-from asyncpg import Connection
+from buildpg.asyncpg import BuildPgConnection
 
 
 class TimedLock(asyncio.Lock):
-    def __init__(self, *, loop=None, timeout=0.5):
+    def __init__(self, *, timeout=0.5):
         self.timeout = timeout
-        super().__init__(loop=loop)
+        super().__init__()
 
     async def acquire(self):
         try:
@@ -17,10 +17,10 @@ class TimedLock(asyncio.Lock):
 
 
 class _LockedExecute:
-    def __init__(self, conn: Connection, lock: Optional[TimedLock] = None):
-        self._conn: Connection = conn
+    def __init__(self, conn: BuildPgConnection, lock: Optional[TimedLock] = None):
+        self._conn: BuildPgConnection = conn
         # could also add lock to each method of the returned connection
-        self._lock: TimedLock = lock or TimedLock(loop=self._conn._loop)
+        self._lock: TimedLock = lock or TimedLock()
 
     async def execute(self, *args, **kwargs):
         async with self._lock:
@@ -82,7 +82,7 @@ class DummyPgConn(_LockedExecute):
 
 
 class _ConnAcquire:
-    def __init__(self, conn: Connection, lock: TimedLock):
+    def __init__(self, conn: BuildPgConnection, lock: TimedLock):
         self._conn = conn
         self._lock = lock
 
@@ -115,3 +115,33 @@ class DummyPgPool(_LockedExecute):
 
     def __repr__(self) -> str:
         return f'<DummyPgPool {self._conn._addr} {self._conn._params}>'
+
+
+class SyncDb:
+    def __init__(self, conn: BuildPgConnection, loop: asyncio.AbstractEventLoop):
+        self._conn = conn
+        self._loop = loop
+
+    def execute(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.execute(*args, **kwargs))
+
+    def execute_b(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.execute_b(*args, **kwargs))
+
+    def fetch(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.fetch(*args, **kwargs))
+
+    def fetch_b(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.fetch_b(*args, **kwargs))
+
+    def fetchval(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.fetchval(*args, **kwargs))
+
+    def fetchval_b(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.fetchval_b(*args, **kwargs))
+
+    def fetchrow(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.fetchrow(*args, **kwargs))
+
+    def fetchrow_b(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.fetchrow_b(*args, **kwargs))

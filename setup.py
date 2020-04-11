@@ -49,7 +49,7 @@ setup(
         'arq>=0.18',
         'asyncpg>=0.20.1',
         'starlette>=0.13.2',
-        'buildpg>=0.2.1',
+        'buildpg>=0.2.3',
         'httpx>=0.11.1',
         'pydantic>=1.4',
         'sentry-sdk>=0.14',
