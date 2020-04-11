@@ -65,10 +65,9 @@ class BaseSettings(PydanticBaseSettings):
 
     http_client_timeout = 10
 
-    csrf_ignore_paths: List[Pattern] = []
+    csrf_except_paths: List[Pattern] = []
     csrf_upload_paths: List[Pattern] = []
-    csrf_cross_origin_paths: List[Pattern] = []
-    cross_origin_origins: List[Pattern] = []
+    preflight_paths: List[Pattern] = []
 
     grecaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
 
