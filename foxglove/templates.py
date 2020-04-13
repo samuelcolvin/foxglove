@@ -44,11 +44,7 @@ class FoxgloveTemplates(_Jinja2Templates):
                 return f'/static/{path}'
 
         env = super().get_env(directory)
-        env.globals.update(
-            prompt_reload=prompt_reload,
-            static_url=static_url,
-            dev_mode=glove.settings.dev_mode,
-        )
+        env.globals.update(prompt_reload=prompt_reload, static_url=static_url, dev_mode=glove.settings.dev_mode)
         return env
 
     def render(self, template_name: str):
@@ -91,16 +87,11 @@ class FoxgloveTestTemplates(FoxgloveTemplates):
         media_type: str = None,
         background=None,
     ) -> _TemplateResponse:
-        if "request" not in context:
+        if 'request' not in context:
             raise ValueError('context must include a "request" key')
         template = self.get_template(name)
         return CustomTemplateResponse(
-            template,
-            context,
-            status_code=status_code,
-            headers=headers,
-            media_type=media_type,
-            background=background,
+            template, context, status_code=status_code, headers=headers, media_type=media_type, background=background,
         )
 
 
