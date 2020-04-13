@@ -1,7 +1,7 @@
 import asyncio
 from functools import wraps
 from time import time
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 from starlette.responses import Response
 from starlette.templating import Jinja2Templates as _Jinja2Templates, _TemplateResponse
@@ -56,24 +56,28 @@ class FoxgloveTemplates(_Jinja2Templates):
             if asyncio.iscoroutinefunction(view):
 
                 @wraps(view)
-                async def view_wrapper(request):
-                    return self._return_template(request, template_name, await view(request))
+                async def view_wrapper(request, *args, **kwargs):
+                    return self._return_template(request, template_name, await view(request, *args, **kwargs))
 
             else:
 
                 @wraps(view)
-                def view_wrapper(request):
-                    return self._return_template(request, template_name, view(request))
+                def view_wrapper(request, *args, **kwargs):
+                    return self._return_template(request, template_name, view(request, *args, **kwargs))
 
             return view_wrapper
 
         return view_decorator
 
-    def _return_template(self, request, template_name: str, context: Optional[dict]):
+    def _return_template(self, request, template_name: str, r: Union[Optional[dict], Tuple[int, Optional[dict]]]):
+        if isinstance(r, (tuple, list)):
+            status_code, context = r
+        else:
+            status_code, context = 200, r
         if context is None:
             context = {}
         context['request'] = request
-        return self.TemplateResponse(template_name, context)
+        return self.TemplateResponse(template_name, context, status_code=status_code)
 
 
 class FoxgloveTestTemplates(FoxgloveTemplates):
