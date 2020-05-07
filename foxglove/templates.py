@@ -1,4 +1,6 @@
 import asyncio
+import os
+import secrets
 from functools import wraps
 from time import time
 from typing import Optional, Tuple, Union
@@ -17,6 +19,7 @@ __all__ = 'FoxgloveTemplates', 'FoxgloveTestTemplates'
 
 reload_sha = 'fbc87301a2470263e3ba45e56c7089f286a84a4e'
 reload_snippet = f'<script src="https://rawcdn.githack.com/samuelcolvin/foxglove/{reload_sha}/reload.js"></script>'
+static_version = (os.getenv('HEROKU_SLUG_COMMIT') or secrets.token_hex(4))[:7]
 
 
 class FoxgloveTemplates(_Jinja2Templates):
@@ -39,6 +42,8 @@ class FoxgloveTemplates(_Jinja2Templates):
                 url = request.url_for(static_route_name, path=path)
                 if context['dev_mode']:
                     url += f'?t={time() * 1000:0.0f}'
+                else:
+                    url += f'?v={static_version}'
                 return url
             except KeyError:
                 return f'/static/{path}'
