@@ -112,7 +112,13 @@ def _get_auto_command() -> Callable[[], None]:
 
 
 @cli.command()
-def patch(patch_name: str = typer.Argument(None), live: bool = False, extra_args: List[str] = None):
+def patch(
+    patch_name: str = typer.Argument(None),
+    live: bool = False,
+    patch_arg: List[str] = typer.Option(
+        None, '--patch-args', '-a', help='extra arguments to pass to the patch, repeat for multiple arguments'
+    ),
+):
     """
     Run a patch function to update or modify the database.
     """
@@ -123,7 +129,7 @@ def patch(patch_name: str = typer.Argument(None), live: bool = False, extra_args
     for path in settings.patch_paths:
         import_module(path)
 
-    return run_patch(settings, patch_name, live, extra_args)
+    return run_patch(settings, patch_name, live, patch_arg)
 
 
 @cli.command()
@@ -187,6 +193,7 @@ def shell():
 def callback(
     settings_path: str = typer.Option(
         os.getenv('ATOOLBOX_SETTINGS', 'settings:Settings'),
+        '--settings-path',
         '-s',
         help=(
             'settings path (dotted, relative to the root directory), defaults to to the environment variable '
@@ -194,9 +201,10 @@ def callback(
         ),
     ),
     root: str = typer.Option(
-        os.getenv('ATOOLBOX_ROOT_DIR', '.'),
+        os.getenv('ATOOLBOX_ROOT_DIR', 'src'),
+        '--root',
         '-r',
-        help='root directory to run command from, defaults to to the environment variable "ATOOLBOX_ROOT_DIR" or "."',
+        help='root directory to run command from, defaults to to the environment variable "ATOOLBOX_ROOT_DIR" or "src"',
     ),
 ) -> None:
     # ugly work around, is there another way? https://github.com/tiangolo/typer/issues/55
