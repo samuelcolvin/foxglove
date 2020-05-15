@@ -19,7 +19,7 @@ class Patch:
     direct: bool = False
 
 
-def run_patch(settings: BaseSettings, patch_name: str, live: bool, args: List[str]):
+def run_patch(settings: BaseSettings, patch_name: str, live: bool, args: Dict[str, str]):
     for path in getattr(settings, 'patch_paths', []):
         import_module(path)
 
@@ -49,7 +49,7 @@ def run_patch(settings: BaseSettings, patch_name: str, live: bool, args: List[st
     return loop.run_until_complete(_run_patch(settings, patch, live, args)) or 0
 
 
-async def _run_patch(settings, patch: Patch, live: bool, args: Tuple[str, ...]):
+async def _run_patch(settings, patch: Patch, live: bool, args: Dict[str, str]):
     from .main import lenient_conn
 
     conn = await lenient_conn(settings)
