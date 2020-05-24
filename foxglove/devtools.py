@@ -8,9 +8,11 @@ from watchgod import DefaultWatcher, awatch
 
 logger = logging.getLogger('foxglove.cli')
 
+extra_ignore = r'\.py$', r'\.pyx$', r'\.pyd$', r'\.s[ca]ss$', r'sasstastic\.yml$'
 
-class IgnorePythonWatcher(DefaultWatcher):
-    ignored_file_regexes = DefaultWatcher.ignored_file_regexes + (r'\.py$', r'\.pyx$', r'\.pyd$')
+
+class FoxgloveWatcher(DefaultWatcher):
+    ignored_file_regexes = DefaultWatcher.ignored_file_regexes + extra_ignore
 
 
 def devtools_up(request):
@@ -19,7 +21,7 @@ def devtools_up(request):
 
 def reload_endpoint(watch_path: str):
     async def watch_reload(prompt_reload):
-        async for _ in awatch(watch_path, watcher_cls=IgnorePythonWatcher):
+        async for _ in awatch(watch_path, watcher_cls=FoxgloveWatcher):
             await prompt_reload()
 
     class ReloadWs(WebSocketEndpoint):
