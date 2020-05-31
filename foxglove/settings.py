@@ -157,6 +157,16 @@ class BaseSettings(PydanticBaseSettings):
             host=conf.hostname, port=conf.port, password=conf.password, database=int((conf.path or '0').strip('/'))
         )
 
+    @validator('pg_db_exists', always=True)
+    def pg_db_exists_heroku(cls, v: bool) -> bool:
+        """
+        pg_db_exists should be true by default on heroku, but not if PG_DB_EXISTS is set to false.
+        """
+        if v or any('PG_DB_EXISTS' == k.upper() for k in os.environ):
+            return v
+        else:
+            return 'DYNO' in os.environ
+
     class Config:
         fields = {
             'pg_dsn': {'env': 'DATABASE_URL'},
