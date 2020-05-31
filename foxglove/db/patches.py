@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
-from typing import Callable, Dict, List, Tuple, Type
+from typing import Callable, Dict, Type
 
 from ..settings import BaseSettings
 
