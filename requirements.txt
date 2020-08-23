@@ -10,4 +10,4 @@ pydantic==1.4
 sentry-sdk==0.14.2
 starlette==0.13.2
 typer==0.1.0
-uvicorn==0.11.3
+uvicorn==0.11.7
