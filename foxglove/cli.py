@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import Callable, List
 
 import typer
-from pydantic.env_settings import BaseSettings as PydanticBaseSettings
-from uvicorn.importer import ImportFromStringError, import_from_string
+from uvicorn.importer import import_from_string
 from uvicorn.main import run as uvicorn_run
 
 from foxglove.logs import build_logging_config, setup_logging
@@ -22,7 +21,6 @@ from .version import VERSION
 logger = logging.getLogger('foxglove.cli')
 
 cli = typer.Typer()
-SETTINGS_PATH: str
 ROOT_PATH: Path
 settings: BaseSettings
 
@@ -53,7 +51,7 @@ def dev():
     """
     logger.info('running web server at %s in dev mode...', settings.port)
     os.environ.update(
-        foxglove_dev_mode='TRUE', foxglove_settings_path=SETTINGS_PATH, foxglove_root_path=str(ROOT_PATH),
+        foxglove_dev_mode='TRUE', foxglove_root_path=str(ROOT_PATH),
     )
     uvicorn_run(
         settings.asgi_path,
@@ -174,7 +172,7 @@ def shell():
     from IPython.terminal.ipapp import load_default_config
 
     c = load_default_config()
-    settings_path, settings_name = SETTINGS_PATH.split(':')
+    settings_path, settings_name = os.environ['foxglove_settings_path'].split(':')
     exec_lines = [
         'import asyncio, base64, math, hashlib, json, os, pickle, re, secrets, sys, time',
         'from datetime import datetime, date, timedelta, timezone',
@@ -221,7 +219,7 @@ def callback(
     # ugly work around, is there another way? https://github.com/tiangolo/typer/issues/55
     if {'--help', '--version'} & set(sys.argv):
         return
-    global ROOT_PATH, SETTINGS_PATH, settings
+    global ROOT_PATH, settings
 
     sys.path.append(os.getcwd())
     ROOT_PATH = Path(root).resolve()
@@ -239,24 +237,13 @@ def callback(
     if ':' not in settings_path:
         settings_path += ':Settings'
 
-    SETTINGS_PATH = settings_path
-    try:
-        settings_cls = import_from_string(settings_path)
-    except ImportFromStringError as exc:
-        raise CliError(f'unable to import "{settings_path}", {exc.__class__.__name__}: {exc}')
+    os.environ['foxglove_settings_path'] = settings_path
+    settings = glove.settings
+    setup_logging()
 
-    if not isinstance(settings_cls, type) or not issubclass(settings_cls, PydanticBaseSettings):
-        raise CliError(f'settings "{settings_cls}" (from "{settings_path}"), is not a valid Settings class')
-
-    settings = settings_cls()
     settings_locale = getattr(settings, 'locale', None)
     if settings_locale:
         locale.setlocale(locale.LC_ALL, settings_locale)
-
-    os.environ['foxglove_settings_path'] = SETTINGS_PATH
-    setup_logging()
-
-    glove.settings = settings
 
 
 class CliError(typer.Exit):

@@ -119,8 +119,7 @@ def build_logging_config() -> Dict[str, Any]:
     """
     setup logging config by updating the arq logging config
     """
-    settings = glove.init_settings()
-    log_level = settings.log_level
+    log_level = glove.settings.log_level
     config = {
         'version': 1,
         'disable_existing_loggers': False,
