@@ -241,7 +241,7 @@ def callback(
     try:
         settings = glove.settings
     except RuntimeError as exc:
-        raise CliError(str(exc)) from e
+        raise CliError(str(exc)) from exc
     setup_logging()
 
     settings_locale = getattr(settings, 'locale', None)
