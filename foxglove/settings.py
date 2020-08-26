@@ -165,7 +165,7 @@ class BaseSettings(PydanticBaseSettings):
         if v or any('PG_DB_EXISTS' == k.upper() for k in os.environ):
             return v
         else:
-            return 'DYNO' in os.environ
+            return 'HEROKU_SLUG_COMMIT' in os.environ
 
     class Config:
         fields = {
