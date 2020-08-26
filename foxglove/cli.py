@@ -238,7 +238,10 @@ def callback(
         settings_path += ':Settings'
 
     os.environ['foxglove_settings_path'] = settings_path
-    settings = glove.settings
+    try:
+        settings = glove.settings
+    except RuntimeError as exc:
+        raise CliError(str(exc)) from e
     setup_logging()
 
     settings_locale = getattr(settings, 'locale', None)

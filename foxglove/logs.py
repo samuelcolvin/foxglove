@@ -98,7 +98,7 @@ def get_env_multiple(*names):
             return v
 
 
-def setup_sentry() -> None:
+def setup_sentry() -> bool:
     if glove.settings.sentry_dsn:
         import sentry_sdk
         from sentry_sdk.integrations.logging import LoggingIntegration
@@ -111,8 +111,10 @@ def setup_sentry() -> None:
             server_name=get_env_multiple('DYNO', 'SERVER_NAME', 'HOSTNAME', 'HOST', 'NAME'),
         )
         logger.info('sentry initialised')
+        return True
     else:
         logger.info('sentry not initialised')
+        return False
 
 
 def build_logging_config() -> Dict[str, Any]:
