@@ -204,16 +204,16 @@ def shell():
 @cli.callback(help=f'foxglove command line interface v{VERSION}')
 def callback(
     settings_path: str = typer.Option(
-        os.getenv('FOXGLOVE_SETTINGS', 'settings:Settings'),
+        os.getenv('FOXGLOVE_SETTINGS'),
         '--settings-path',
         '-s',
         help=(
             'settings path (dotted, relative to the root directory), defaults to to the environment variable '
-            '"FOXGLOVE_SETTINGS" or "settings.Settings"'
+            '"FOXGLOVE_SETTINGS" or inferred'
         ),
     ),
     root: str = typer.Option(
-        os.getenv('FOXGLOVE_ROOT_DIR', 'src'),
+        os.getenv('FOXGLOVE_ROOT_DIR', '.'),
         '--root',
         '-r',
         help='root directory to run command from, defaults to to the environment variable "FOXGLOVE_ROOT_DIR" or "src"',
@@ -229,6 +229,14 @@ def callback(
     ROOT_PATH = Path(root).resolve()
     sys.path.append(str(ROOT_PATH))
     os.chdir(str(ROOT_PATH))
+
+    if settings_path is None:
+        if (ROOT_PATH / 'settings.py').is_file():
+            settings_path = 'settings'
+        elif (ROOT_PATH / 'src').is_dir():
+            settings_path = 'src.settings'
+        else:
+            raise CliError(f'unable to infer settings path')
 
     if ':' not in settings_path:
         settings_path += ':Settings'
