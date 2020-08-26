@@ -13,7 +13,7 @@ from pydantic.env_settings import BaseSettings as PydanticBaseSettings
 from uvicorn.importer import ImportFromStringError, import_from_string
 from uvicorn.main import run as uvicorn_run
 
-from foxglove.logs import setup_logging
+from foxglove.logs import build_logging_config, setup_logging
 
 from .main import glove
 from .settings import BaseSettings
@@ -42,6 +42,8 @@ def web():
         workers=settings.web_workers,
         proxy_headers=True,
         forwarded_allow_ips='*',
+        log_config=build_logging_config(),
+        access_log=False,
     )
 
 
@@ -55,7 +57,13 @@ def dev():
         foxglove_dev_mode='TRUE', foxglove_settings_path=SETTINGS_PATH, foxglove_root_path=str(ROOT_PATH),
     )
     uvicorn_run(
-        settings.asgi_path, debug=True, host='127.0.0.1', port=settings.port, reload=True, reload_dirs=[ROOT_PATH]
+        settings.asgi_path,
+        debug=True,
+        host='127.0.0.1',
+        port=settings.port,
+        reload=True,
+        reload_dirs=[ROOT_PATH],
+        log_config=build_logging_config(),
     )
 
 
@@ -83,22 +91,22 @@ def worker():
 @cli.command()
 def auto():
     """
-    Run either the web server or worker depending on the environment variables: ATOOLBOX_COMMAND, DYNO and PORT.
+    Run either the web server or worker depending on the environment variables: FOXGLOVE_COMMAND, DYNO and PORT.
     """
     function = _get_auto_command()
     function()
 
 
 def _get_auto_command() -> Callable[[], None]:
-    if command_env := os.getenv('ATOOLBOX_COMMAND'):
-        logger.info('using environment variable ATOOLBOX_COMMAND=%r to infer command', command_env)
+    if command_env := os.getenv('FOXGLOVE_COMMAND'):
+        logger.info('using environment variable FOXGLOVE_COMMAND=%r to infer command', command_env)
         command_env = command_env.lower()
         if command_env == 'web':
             return web
         elif command_env == 'worker':
             return worker
         elif command_env != 'auto':
-            raise CliError(f'Invalid value for ATOOLBOX_COMMAND: {command_env!r}')
+            raise CliError(f'Invalid value for FOXGLOVE_COMMAND: {command_env!r}')
 
     if dyno_env := os.getenv('DYNO'):
         logger.info('using environment variable DYNO=%r to infer command', dyno_env)
@@ -116,7 +124,10 @@ def patch(
     patch_name: str = typer.Argument(None),
     live: bool = False,
     patch_arg: List[str] = typer.Option(
-        None, '--patch-args', '-a', help='extra arguments to pass to the patch, repeat for multiple arguments'
+        None,
+        '--patch-args',
+        '-a',
+        help='extra arguments to pass to the patch, repeat for multiple arguments, usage: "-a <name>:<value>"',
     ),
 ):
     """
@@ -193,19 +204,19 @@ def shell():
 @cli.callback(help=f'foxglove command line interface v{VERSION}')
 def callback(
     settings_path: str = typer.Option(
-        os.getenv('ATOOLBOX_SETTINGS', 'settings:Settings'),
+        os.getenv('FOXGLOVE_SETTINGS', 'settings:Settings'),
         '--settings-path',
         '-s',
         help=(
             'settings path (dotted, relative to the root directory), defaults to to the environment variable '
-            '"ATOOLBOX_SETTINGS" or "settings.Settings"'
+            '"FOXGLOVE_SETTINGS" or "settings.Settings"'
         ),
     ),
     root: str = typer.Option(
-        os.getenv('ATOOLBOX_ROOT_DIR', 'src'),
+        os.getenv('FOXGLOVE_ROOT_DIR', 'src'),
         '--root',
         '-r',
-        help='root directory to run command from, defaults to to the environment variable "ATOOLBOX_ROOT_DIR" or "src"',
+        help='root directory to run command from, defaults to to the environment variable "FOXGLOVE_ROOT_DIR" or "src"',
     ),
 ) -> None:
     # ugly work around, is there another way? https://github.com/tiangolo/typer/issues/55

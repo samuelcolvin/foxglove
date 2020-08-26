@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from starlette.requests import Request
-from starlette.responses import RedirectResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 try:
     from devtools import pformat
@@ -56,6 +56,15 @@ class HttpMessageError(Exception):
     def __str__(self) -> str:
         return repr(self)
 
+    @staticmethod
+    def handle(exc: 'HttpMessageError'):
+        content = {}
+        if exc.message:
+            content['message'] = exc.message
+        if exc.details:
+            content['details'] = exc.details
+        return JSONResponse(status_code=exc.status, content=content, headers=exc.headers)
+
 
 class HttpOk(HttpMessageError):
     status = 200
@@ -100,6 +109,10 @@ class HttpMethodNotAllowed(HttpMessageError):
 
 class HttpConflict(HttpMessageError):
     status = 409
+
+
+class HttpUnprocessableEntity(HttpMessageError):
+    status = 422
 
 
 class Http470(HttpMessageError):
