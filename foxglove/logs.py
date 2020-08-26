@@ -3,9 +3,11 @@ import logging.config
 import os
 import traceback
 from io import StringIO
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from uvicorn.logging import DefaultFormatter
+
+from .main import glove
 
 try:
     import pygments
@@ -60,7 +62,7 @@ standard_record_keys = {
 
 class HighlightExtraFormatter(DefaultFormatter):
     def __init__(self, *args, **kwargs):
-        self.sentry_active = bool(get_sentry_dsn())
+        self.sentry_active = bool(glove.settings.sentry_dsn)
         super().__init__(*args, **kwargs)
 
     def formatMessage(self, record):
@@ -96,25 +98,16 @@ def get_env_multiple(*names):
             return v
 
 
-def get_sentry_dsn() -> Optional[str]:
-    sentry_dsn = os.getenv('SENTRY_DSN', None)
-    if sentry_dsn in ('', '-'):
-        # thus setting an environment variable of "-" means no sentry
-        sentry_dsn = None
-
-    return sentry_dsn
-
-
 def setup_sentry() -> None:
-    if sentry_dsn := get_sentry_dsn():
+    if glove.settings.sentry_dsn:
         import sentry_sdk
         from sentry_sdk.integrations.logging import LoggingIntegration
 
         sentry_sdk.init(
-            dsn=sentry_dsn,
+            dsn=glove.settings.sentry_dsn,
             integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.WARNING)],
-            release=get_env_multiple('COMMIT', 'RELEASE'),
-            environment=get_env_multiple('ENV', 'ENVIRONMENT'),
+            release=glove.settings.release,
+            environment=glove.settings.environment,
             server_name=get_env_multiple('DYNO', 'SERVER_NAME', 'HOSTNAME', 'HOST', 'NAME'),
         )
         logger.info('sentry initialised')
@@ -122,12 +115,12 @@ def setup_sentry() -> None:
         logger.info('sentry not initialised')
 
 
-def build_logging_config(debug: bool = False) -> Dict[str, Any]:
+def build_logging_config() -> Dict[str, Any]:
     """
     setup logging config by updating the arq logging config
     """
-    log_level = 'DEBUG' if debug else 'INFO'
-
+    settings = glove.init_settings()
+    log_level = settings.log_level
     config = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -165,7 +158,7 @@ def build_logging_config(debug: bool = False) -> Dict[str, Any]:
     return config
 
 
-def setup_logging(debug: bool = False) -> None:
-    config = build_logging_config(debug)
+def setup_logging() -> None:
+    config = build_logging_config()
     logging.config.dictConfig(config)
     setup_sentry()

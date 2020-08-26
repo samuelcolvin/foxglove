@@ -34,7 +34,6 @@ def web():
     """
     logger.info('running web server at %s...', settings.port)
     # wait_for_services(settings)
-    os.environ['foxglove_settings_path'] = SETTINGS_PATH
     uvicorn_run(
         settings.asgi_path,
         host='0.0.0.0',
@@ -223,7 +222,6 @@ def callback(
     if {'--help', '--version'} & set(sys.argv):
         return
     global ROOT_PATH, SETTINGS_PATH, settings
-    setup_logging()
 
     sys.path.append(os.getcwd())
     ROOT_PATH = Path(root).resolve()
@@ -254,6 +252,9 @@ def callback(
     settings_locale = getattr(settings, 'locale', None)
     if settings_locale:
         locale.setlocale(locale.LC_ALL, settings_locale)
+
+    os.environ['foxglove_settings_path'] = SETTINGS_PATH
+    setup_logging()
 
     glove.settings = settings
 

@@ -1,7 +1,9 @@
 import asyncio
+import os
 
 import httpx
 from buildpg.asyncpg import BuildPgPool
+from uvicorn.importer import import_from_string
 
 from .db import create_pg_pool
 from .settings import BaseSettings
@@ -24,6 +26,12 @@ class Glove:
         await asyncio.gather(self.pg.close(), self.http.aclose())
         del self.pg
         del self.http
+
+    def init_settings(self) -> BaseSettings:
+        if not hasattr(self, 'settings'):
+            settings_cls = import_from_string(os.environ['foxglove_settings_path'])
+            self.settings: BaseSettings = settings_cls()
+        return self.settings
 
 
 glove = Glove()

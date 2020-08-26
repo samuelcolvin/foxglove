@@ -1,7 +1,7 @@
 import os
 import secrets
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Pattern, Type, Union
+from typing import Callable, Dict, List, Optional, Pattern, Type, Union, Any
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
@@ -37,6 +37,11 @@ else:
 class BaseSettings(PydanticBaseSettings):
     dev_mode: bool = False
     test_mode: bool = False
+    release: Optional[str] = None
+    environment: str = 'dev'
+    sentry_dsn: Optional[str] = None
+    log_level: str = 'INFO'
+
     asgi_path: str = 'foxglove.asgi:app'
     routes: Optional[str] = None
     middleware: Optional[str] = None
@@ -165,11 +170,34 @@ class BaseSettings(PydanticBaseSettings):
         if v or any('PG_DB_EXISTS' == k.upper() for k in os.environ):
             return v
         else:
-            return 'HEROKU_SLUG_COMMIT' in os.environ
+            return 'DYNO' in os.environ or 'HEROKU_SLUG_COMMIT' in os.environ
+
+    @validator('environment', always=True)
+    def set_environment(cls, v: str, values: Dict[str, Any]) -> str:
+        if values.get('dev_mode'):
+            return 'dev'
+        return v
+
+    @validator('sentry_dsn', always=True)
+    def set_sentry_dsn(cls, sentry_dsn: Optional[str]) -> Optional[str]:
+        if sentry_dsn in ('', '-'):
+            # thus setting an environment variable of "-" means no sentry
+            return None
+        else:
+            return sentry_dsn
+
+    @validator('release', always=True)
+    def set_release(cls, release: Optional[str]) -> Optional[str]:
+        if release:
+            return release[:7]
+        else:
+            return release
 
     class Config:
         fields = {
             'pg_dsn': {'env': 'DATABASE_URL'},
             'redis_settings': {'env': ['REDISCLOUD_URL', 'REDIS_URL']},
             'dev_mode': {'env': ['foxglove_dev_mode']},
+            'environment': {'env': ['ENV', 'ENVIRONMENT']},
+            'release': {'env': ['COMMIT', 'RELEASE', 'HEROKU_SLUG_COMMIT']},
         }
