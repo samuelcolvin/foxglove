@@ -234,7 +234,7 @@ def callback(
         elif (ROOT_PATH / 'src').is_dir():
             settings_path = 'src.settings'
         else:
-            raise CliError(f'unable to infer settings path')
+            raise CliError('unable to infer settings path')
 
     if ':' not in settings_path:
         settings_path += ':Settings'

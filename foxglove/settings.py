@@ -1,7 +1,7 @@
 import os
 import secrets
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Pattern, Type, Union, Any
+from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
