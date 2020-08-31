@@ -6,7 +6,8 @@ from enum import Enum
 from importlib import import_module
 from typing import Callable, Dict, Type
 
-from ..settings import BaseSettings
+from .. import glove
+from .helpers import DummyPgPool
 
 logger = logging.getLogger('foxglove.patch')
 patches = []
@@ -19,8 +20,8 @@ class Patch:
     direct: bool = False
 
 
-def run_patch(settings: BaseSettings, patch_name: str, live: bool, args: Dict[str, str]):
-    for path in getattr(settings, 'patch_paths', []):
+def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
+    for path in getattr(glove.settings, 'patch_paths', []):
         import_module(path)
 
     if patch_name is None:
@@ -46,19 +47,21 @@ def run_patch(settings: BaseSettings, patch_name: str, live: bool, args: Dict[st
     else:
         logger.info(f'running patch {patch_name} live {live}')
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(_run_patch(settings, patch, live, args)) or 0
+    return loop.run_until_complete(_run_patch(patch, live, args)) or 0
 
 
-async def _run_patch(settings, patch: Patch, live: bool, args: Dict[str, str]):
+async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
     from .main import lenient_conn
 
-    conn = await lenient_conn(settings)
+    conn = await lenient_conn(glove.settings)
     tr = None
     if not patch.direct:
         tr = conn.transaction()
         await tr.start()
     logger.info('=' * 40)
-    kwargs = dict(conn=conn, settings=settings, live=live, args=args, logger=logger)
+    glove.pg = DummyPgPool(conn)
+    await glove.startup()
+    kwargs = dict(conn=conn, live=live, args=args, logger=logger)
     try:
         if asyncio.iscoroutinefunction(patch.func):
             result = await patch.func(**kwargs)
@@ -84,6 +87,7 @@ async def _run_patch(settings, patch: Patch, live: bool, args: Dict[str, str]):
                 logger.info('not live, rolling back')
                 await tr.rollback()
     finally:
+        await glove.shutdown()
         await conn.close()
 
 
@@ -101,12 +105,12 @@ def patch(func_=None, /, direct=False):
 
 
 @patch
-async def rerun_sql(*, conn, settings, **kwargs):
+async def rerun_sql(*, conn, **kwargs):
     """
     rerun the contents of settings.sql_path.
     """
     # this require you to use "CREATE X IF NOT EXISTS" everywhere
-    await conn.execute(settings.sql)
+    await conn.execute(glove.settings.sql)
 
 
 async def update_enums(enums: Dict[str, Type[Enum]], conn):

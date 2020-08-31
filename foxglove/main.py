@@ -1,6 +1,7 @@
 import asyncio
 import os
 
+import arq
 import httpx
 from buildpg.asyncpg import BuildPgPool
 from pydantic.env_settings import BaseSettings as PydanticBaseSettings
@@ -14,19 +15,37 @@ __all__ = ('glove',)
 
 class Glove:
     _settings: BaseSettings
+    _http: httpx.AsyncClient
     pg: BuildPgPool
-    http: httpx.AsyncClient
+    redis: arq.ArqRedis
 
     async def startup(self):
         if not hasattr(self, 'pg'):
             self.pg = await create_pg_pool(self.settings)
-        if not hasattr(self, 'http'):
-            self.http = httpx.AsyncClient(timeout=self.settings.http_client_timeout)
+        if not hasattr(self, 'redis') and self.settings.redis_settings:
+            self.redis = await arq.create_pool(self.settings.redis_settings)
+        return GloveContext(self)
 
     async def shutdown(self):
-        await asyncio.gather(self.pg.close(), self.http.aclose())
-        del self.pg
-        del self.http
+        coros = []
+        if pg := getattr(self, 'pg', None):
+            coros.append(pg.close())
+        if http := getattr(self, 'http', None):
+            coros.append(http.aclose())
+        if redis := getattr(self, 'redis', None):
+            redis.close()
+            coros.append(redis.wait_closed())
+        await asyncio.gather(*coros)
+        for prop in 'pg', '_http', 'redis':
+            if hasattr(self, prop):
+                delattr(self, prop)
+
+    @property
+    def http(self) -> httpx.AsyncClient:
+        http = getattr(self, '_http', None)
+        if http is None:
+            http = self._http = httpx.AsyncClient(timeout=self.settings.http_client_timeout)
+        return http
 
     @property
     def settings(self) -> BaseSettings:
@@ -43,6 +62,17 @@ class Glove:
 
             settings = self._settings = settings_cls()
         return settings
+
+
+class GloveContext:
+    def __init__(self, g: Glove):
+        self._glove = g
+
+    async def __aenter__(self) -> Glove:
+        return self._glove
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._glove.shutdown()
 
 
 glove = Glove()

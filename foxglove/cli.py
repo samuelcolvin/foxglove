@@ -138,7 +138,7 @@ def patch(
         import_module(path)
 
     arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_arg)}
-    return run_patch(settings, patch_name, live, arg_lookup)
+    return run_patch(patch_name, live, arg_lookup)
 
 
 @cli.command()
