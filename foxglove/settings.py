@@ -1,13 +1,11 @@
 import os
 import secrets
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
+from typing import Any, Dict, List, Optional, Pattern
 from urllib.parse import urlparse
 
 from pydantic import BaseSettings as PydanticBaseSettings, validator
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
-from starlette.routing import Route
 from uvicorn.importer import import_from_string
 
 try:
@@ -43,14 +41,12 @@ class BaseSettings(PydanticBaseSettings):
     log_level: str = 'INFO'
 
     asgi_path: str = 'foxglove.asgi:app'
-    routes: Optional[str] = None
-    middleware: Optional[str] = None
-    exception_handlers: Optional[str] = None
+    app: str = 'src.main:app'
     web_workers: Optional[int] = None
 
     worker_func: Optional[str] = None
 
-    patch_paths: List[str] = []
+    patch_paths: List[str] = ['src.patches']
 
     sql_path: Path = 'models.sql'
     template_dir: Optional[Path] = 'templates'
@@ -87,52 +83,8 @@ class BaseSettings(PydanticBaseSettings):
     def sql(self):
         return self.sql_path.read_text()
 
-    def get_routes(self) -> List[Route]:
-        routes = self.routes or f'{self.__module__}:routes'
-        return import_from_string(routes)
-
-    def get_middleware(self) -> List[Middleware]:
-        if self.middleware:
-            return import_from_string(self.middleware)
-        elif self.pg_dsn:
-            from .db import PgMiddleware
-
-            return [Middleware(PgMiddleware)]
-        else:
-            return []
-
-    def get_exception_handlers(self) -> Dict[Union[int, Type[Exception]], Callable]:
-        if self.exception_handlers:
-            return import_from_string(self.exception_handlers)
-        else:
-            from .exceptions import HttpRedirect, redirect_handler
-
-            return {HttpRedirect: redirect_handler}
-
     def create_app(self) -> Starlette:
-        routes = list(self.get_routes())
-        if self.dev_mode:
-            foxglove_root_path = os.environ.get('foxglove_root_path')
-
-            from .devtools import reload_endpoint
-
-            if foxglove_root_path:
-                routes += reload_endpoint(foxglove_root_path)
-            else:
-                raise RuntimeError(
-                    'dev_mode enabled but "foxglove_root_path" not found, can\'t add the reload endpoint'
-                )
-
-        from .main import glove
-
-        return Starlette(
-            debug=self.dev_mode,
-            routes=routes,
-            middleware=list(self.get_middleware()),
-            exception_handlers=dict(self.get_exception_handlers()),
-            on_startup=[glove.startup],
-            on_shutdown=[glove.shutdown],
-        )
+        return import_from_string(self.app)
 
     @property
     def _pg_dsn_parsed(self):

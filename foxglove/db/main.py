@@ -4,6 +4,7 @@ import os
 
 from async_timeout import timeout
 from buildpg import asyncpg
+from buildpg.asyncpg import BuildPgConnection
 
 from ..settings import BaseSettings
 
@@ -101,7 +102,7 @@ def reset_database(settings: BaseSettings):
         logger.info('done.')
 
 
-async def lenient_conn(settings: BaseSettings, with_db=True):
+async def lenient_conn(settings: BaseSettings, with_db: bool = True) -> BuildPgConnection:
     if with_db:
         dsn = settings.pg_dsn
     else:
