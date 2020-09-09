@@ -1,6 +1,5 @@
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
-
 from setuptools import setup
 
 description = 'Tools for Starlette'
@@ -53,7 +52,7 @@ setup(
         'httpx>=0.11.1',
         'pydantic>=1.4',
         'sentry-sdk>=0.14',
-        'typer>=0.1.0',
+        'typer>=0.3.2',
         'uvicorn>=0.11.3',
     ],
     extras_require={'extra': ['ipython>=7.7.0', 'watchgod>=0.6']},

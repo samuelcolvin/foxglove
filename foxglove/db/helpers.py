@@ -1,7 +1,6 @@
 import asyncio
-from typing import Optional
-
 from buildpg.asyncpg import BuildPgConnection
+from typing import Optional
 
 
 class TimedLock(asyncio.Lock):

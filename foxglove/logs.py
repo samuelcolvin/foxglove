@@ -4,15 +4,14 @@ import os
 import traceback
 from io import StringIO
 from typing import Any, Dict
-
 from uvicorn.logging import DefaultFormatter
 
 from .main import glove
 
 try:
     import pygments
-    from pygments.lexers import Python3TracebackLexer
     from pygments.formatters import Terminal256Formatter
+    from pygments.lexers import Python3TracebackLexer
 except ImportError:  # pragma: no cover
     pyg_lexer = pyg_formatter = None
 else:

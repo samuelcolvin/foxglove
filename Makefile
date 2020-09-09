@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := all
-isort = isort -rc foxglove tests
-black = black -S -l 120 --target-version py37 foxglove tests
+isort = isort foxglove tests
+black = black -S -l 120 --target-version py38 foxglove tests
 
 .PHONY: install
 install:
@@ -16,8 +16,8 @@ format:
 .PHONY: lint
 lint:
 	flake8 foxglove/ tests/
-	$(isort) --check-only -df
-	$(black) --check
+	$(isort) --check-only --df
+	$(black) --check --diff
 
 .PHONY: test
 test:

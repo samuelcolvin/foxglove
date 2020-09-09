@@ -1,7 +1,8 @@
+from dataclasses import dataclass
+
 import asyncio
 import logging
 import re
-from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
 from typing import Callable, Dict, Type

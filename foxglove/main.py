@@ -1,8 +1,7 @@
-import asyncio
-import os
-
 import arq
+import asyncio
 import httpx
+import os
 from buildpg.asyncpg import BuildPgPool
 from pydantic.env_settings import BaseSettings as PydanticBaseSettings
 from uvicorn.importer import ImportFromStringError, import_from_string
