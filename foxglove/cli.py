@@ -20,13 +20,15 @@ from .version import VERSION
 
 logger = logging.getLogger('foxglove.cli')
 
+__all__ = ('cli',)
+
 cli = typer.Typer()
 ROOT_PATH: Path
 settings: BaseSettings
 
 
-@cli.command()
-def web():
+@cli.command(name='web')
+def _web():
     """
     Run the web server using uvicorn.
     """
@@ -44,8 +46,8 @@ def web():
     )
 
 
-@cli.command()
-def dev():
+@cli.command(name='dev')
+def _dev():
     """
     Run the web server using uvicorn for development
     """
@@ -64,8 +66,8 @@ def dev():
     )
 
 
-@cli.command()
-def worker():
+@cli.command(name='worker')
+def _worker():
     """
     Run the worker command from settings.worker_func.
     """
@@ -85,8 +87,8 @@ def worker():
         raise CliError("settings.worker_func not set, can't run the worker")
 
 
-@cli.command()
-def auto():
+@cli.command(name='auto')
+def _auto():
     """
     Run either the web server or worker depending on the environment variables: FOXGLOVE_COMMAND, DYNO and PORT.
     """
@@ -99,28 +101,28 @@ def _get_auto_command() -> Callable[[], None]:
         logger.info('using environment variable FOXGLOVE_COMMAND=%r to infer command', command_env)
         command_env = command_env.lower()
         if command_env == 'web':
-            return web
+            return _web
         elif command_env == 'worker':
-            return worker
+            return _worker
         elif command_env != 'auto':
             raise CliError(f'Invalid value for FOXGLOVE_COMMAND: {command_env!r}')
 
     if dyno_env := os.getenv('DYNO'):
         logger.info('using environment variable DYNO=%r to infer command', dyno_env)
-        return web if dyno_env.lower().startswith('web') else worker
+        return _web if dyno_env.lower().startswith('web') else _worker
     elif (port_env := os.getenv('PORT')) and port_env.isdigit():
         logger.info('using environment variable PORT=%s to infer command as web', port_env)
-        return web
+        return _web
     else:
         logger.info('no environment variable found to infer command, assuming worker')
-        return worker
+        return _worker
 
 
-@cli.command()
-def patch(
+@cli.command(name='patch')
+def _patch(
     patch_name: str = typer.Argument(None),
     live: bool = False,
-    patch_arg: List[str] = typer.Option(
+    patch_args: List[str] = typer.Option(
         None,
         '--patch-args',
         '-a',
@@ -137,12 +139,12 @@ def patch(
     for path in settings.patch_paths:
         import_module(path)
 
-    arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_arg)}
+    arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_args)}
     return run_patch(patch_name, live, arg_lookup)
 
 
-@cli.command()
-def reset_database():
+@cli.command(name='reset_database')
+def _reset_database():
     """
     Delete the main database and recreate it empty. THIS CAN BE DESTRUCTIVE!
     """
@@ -152,8 +154,8 @@ def reset_database():
     reset_database(settings)
 
 
-@cli.command()
-def flush_redis():
+@cli.command(name='flush_redis')
+def _flush_redis():
     """
     Empty the redis cache.
     """
@@ -163,8 +165,8 @@ def flush_redis():
     flush_redis(settings)
 
 
-@cli.command()
-def shell():
+@cli.command(name='shell')
+def _shell():
     """
     Run an interactive python shell.
     """

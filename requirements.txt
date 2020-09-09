@@ -1,13 +1,13 @@
 -r tests/requirements.txt
 
-arq==0.18.4
-asyncpg==0.20.1
+arq==0.19
+asyncpg==0.21.0
 async-timeout==3.0.1
 buildpg==0.2.3
-ipython==7.13.0
-httpx==0.11.1
-pydantic==1.4
-sentry-sdk==0.14.2
-starlette==0.13.2
-typer==0.1.0
-uvicorn==0.11.7
+ipython==7.18.0
+httpx==0.14.3
+pydantic==1.6.1
+sentry-sdk==0.17.3
+starlette==0.13.6
+typer==0.3.2
+uvicorn==0.11.8
