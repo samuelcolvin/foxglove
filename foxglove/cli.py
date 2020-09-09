@@ -4,10 +4,11 @@ import locale
 import logging
 import os
 import sys
-import typer
 from importlib import import_module
 from pathlib import Path
 from typing import Callable, List
+
+import typer
 from uvicorn.importer import import_from_string
 from uvicorn.main import run as uvicorn_run
 

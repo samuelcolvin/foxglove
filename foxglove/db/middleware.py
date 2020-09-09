@@ -1,6 +1,7 @@
+from typing import Callable
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from typing import Callable
 
 
 class PgMiddleware(BaseHTTPMiddleware):

@@ -1,6 +1,7 @@
+from typing import Any, Dict, Optional
+
 from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse
-from typing import Any, Dict, Optional
 
 try:
     from devtools import pformat

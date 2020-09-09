@@ -1,12 +1,13 @@
 import os
 import secrets
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
+from urllib.parse import urlparse
+
 from pydantic import BaseSettings as PydanticBaseSettings, validator
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.routing import Route
-from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
-from urllib.parse import urlparse
 from uvicorn.importer import import_from_string
 
 try:

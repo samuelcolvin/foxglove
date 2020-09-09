@@ -1,6 +1,7 @@
+from typing import Type, TypeVar
+
 from pydantic import BaseModel, ValidationError
 from starlette.requests import Request
-from typing import Type, TypeVar
 
 from . import exceptions
 

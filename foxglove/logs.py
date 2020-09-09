@@ -4,6 +4,7 @@ import os
 import traceback
 from io import StringIO
 from typing import Any, Dict
+
 from uvicorn.logging import DefaultFormatter
 
 from .main import glove
