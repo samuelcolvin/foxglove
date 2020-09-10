@@ -17,7 +17,6 @@ def fix_settings():
     settings = Settings(
         dev_mode=False,
         test_mode=True,
-        pg_dsn='postgres://postgres@localhost:5432/foxglove_test',
         # redis_settings='redis://localhost:6379/6',
     )
     assert not settings.dev_mode
@@ -30,7 +29,7 @@ def fix_settings():
 
 @pytest.fixture(scope='session', name='alt_settings')
 def fix_alt_settings(settings: Settings):
-    return settings.copy(update=dict(pg_dsn='postgres://postgres@localhost:5432/foxglove_test_alt'))
+    return settings.copy(update=dict(pg_dsn='postgres://postgres@localhost:5432/foxglove_demo_alt'))
 
 
 @pytest.fixture(name='db_conn_global')
