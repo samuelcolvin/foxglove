@@ -83,6 +83,9 @@ class ErrorMiddleware(BaseHTTPMiddleware):
                 response_body=lenient_json(response_data),
             )
 
+        if exc:
+            extra['exception_extra'] = exc_extra(exc)
+
         view_ref = str(request.url.path)
         event_data = dict(
             extra=extra,
