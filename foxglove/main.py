@@ -19,14 +19,16 @@ class Glove:
     pg: BuildPgPool
     redis: arq.ArqRedis
 
-    async def startup(self):
+    async def startup(self) -> None:
         if not hasattr(self, 'pg'):
             self.pg = await create_pg_pool(self.settings)
         if not hasattr(self, 'redis') and self.settings.redis_settings:
             self.redis = await arq.create_pool(self.settings.redis_settings)
+
+    def context(self) -> 'GloveContext':
         return GloveContext(self)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         coros = []
         if pg := getattr(self, 'pg', None):
             coros.append(pg.close())
@@ -55,10 +57,10 @@ class Glove:
             try:
                 settings_cls = import_from_string(settings_path)
             except ImportFromStringError as exc:
-                raise RuntimeError(f'unable to import "{settings_path}", {exc.__class__.__name__}: {exc}')
+                raise ImportError(f'unable to import "{settings_path}", {exc.__class__.__name__}: {exc}')
 
             if not isinstance(settings_cls, type) or not issubclass(settings_cls, PydanticBaseSettings):
-                raise RuntimeError(f'settings "{settings_cls}" (from "{settings_path}"), is not a valid Settings class')
+                raise ImportError(f'settings "{settings_cls}" (from "{settings_path}"), is not a valid Settings class')
 
             settings = self._settings = settings_cls()
         return settings
@@ -68,10 +70,10 @@ class GloveContext:
     def __init__(self, g: Glove):
         self._glove = g
 
-    async def __aenter__(self) -> Glove:
-        return self._glove
+    async def __aenter__(self) -> None:
+        await self._glove.startup()
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self._glove.shutdown()
 
 

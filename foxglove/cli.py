@@ -80,7 +80,7 @@ def _worker():
 
     if settings.worker_func:
         logger.info('running worker...')
-        worker_func: Callable[[BaseSettings], None] = import_from_string(settings.worker_func)
+        worker_func: Callable[..., None] = import_from_string(settings.worker_func)
         # wait_for_services(settings)
         worker_func(settings=settings)
     else:
@@ -223,9 +223,9 @@ def callback(
         return
     global ROOT_PATH, settings
 
-    sys.path.append(os.getcwd())
+    sys.path.insert(0, os.getcwd())
     ROOT_PATH = Path(root).resolve()
-    sys.path.append(str(ROOT_PATH))
+    sys.path.insert(0, str(ROOT_PATH))
     os.chdir(str(ROOT_PATH))
 
     if settings_path is None:
@@ -243,6 +243,7 @@ def callback(
     try:
         settings = glove.settings
     except RuntimeError as exc:
+        # TODO print stack in verbose mode
         raise CliError(str(exc)) from exc
     setup_logging()
 

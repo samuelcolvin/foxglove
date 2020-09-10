@@ -7,6 +7,7 @@ from tests.conftest import ConnContext
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.mark.filterwarnings('ignore::DeprecationWarning')
 async def test_prepare_database(db_conn_global, alt_settings: BaseSettings):
     await db_conn_global.execute(f'drop database if exists {alt_settings.pg_name}')
 

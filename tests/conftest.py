@@ -17,8 +17,8 @@ def fix_settings():
     settings = Settings(
         dev_mode=False,
         test_mode=True,
-        pg_dsn='postgres://postgres@localhost:5432/test_foxglove',
-        redis_settings='redis://localhost:6379/6',
+        pg_dsn='postgres://postgres@localhost:5432/foxglove_test',
+        # redis_settings='redis://localhost:6379/6',
     )
     assert not settings.dev_mode
     glove._settings = settings
@@ -30,12 +30,12 @@ def fix_settings():
 
 @pytest.fixture(scope='session', name='alt_settings')
 def fix_alt_settings(settings: Settings):
-    return settings.copy(update=dict(pg_dsn='postgres://postgres@localhost:5432/test_foxglove_alt'))
+    return settings.copy(update=dict(pg_dsn='postgres://postgres@localhost:5432/foxglove_test_alt'))
 
 
 @pytest.fixture(name='db_conn_global')
 async def _fix_db_conn_global(settings):
-    conn = await lenient_conn(settings, with_db=False)
+    conn = await lenient_conn(settings, with_db=False, sleep=0)
 
     yield conn
 
@@ -45,6 +45,13 @@ async def _fix_db_conn_global(settings):
 @pytest.fixture(scope='session', name='clean_db')
 def fix_clean_db(settings):
     asyncio.run(prepare_database(settings, True))
+
+
+@pytest.fixture(name='wipe_db')
+async def fix_wipe_db(settings):
+    await prepare_database(settings, True)
+    yield
+    await prepare_database(settings, True)
 
 
 @pytest.fixture(name='db_conn')

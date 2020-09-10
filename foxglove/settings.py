@@ -41,6 +41,7 @@ class BaseSettings(PydanticBaseSettings):
     log_level: str = 'INFO'
 
     asgi_path: str = 'foxglove.asgi:app'
+    # TODO src here should be replaced with '.main:app' then prefixed with the name of the directory settings is in
     app: str = 'src.main:app'
     web_workers: Optional[int] = None
 

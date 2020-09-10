@@ -102,7 +102,7 @@ def reset_database(settings: BaseSettings):
         logger.info('done.')
 
 
-async def lenient_conn(settings: BaseSettings, with_db: bool = True) -> BuildPgConnection:
+async def lenient_conn(settings: BaseSettings, *, with_db: bool = True, sleep: float = 1) -> BuildPgConnection:
     if with_db:
         dsn = settings.pg_dsn
     else:
@@ -117,7 +117,7 @@ async def lenient_conn(settings: BaseSettings, with_db: bool = True) -> BuildPgC
                 raise
             else:
                 logger.warning('pg temporary connection error "%s", %d retries remaining...', e, retry)
-                await asyncio.sleep(1)
+                await asyncio.sleep(sleep)
         else:
             log = logger.debug if retry == 8 else logger.info
             log('pg connection successful, version: %s', await conn.fetchval('SELECT version()'))
