@@ -2,57 +2,134 @@ import json
 import logging
 import secrets
 from time import time
-from typing import Any, Callable
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional
 
+from sentry_sdk import capture_event
+from sentry_sdk.utils import event_from_exception, exc_info_from_error
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from . import glove
+from .utils import get_ip
+
 logger = logging.getLogger('foxglove.middleware')
+request_logger = logging.getLogger('foxglove.bad_requests')
 
 __all__ = 'ErrorMiddleware', 'CsrfMiddleware'
 
 
 class ErrorMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, should_warn: Callable[[Response], bool] = None):
+    def __init__(
+        self,
+        app,
+        should_warn: Callable[[Response], bool] = None,
+        get_user: Callable[[Request], Awaitable[Dict[str, Any]]] = None,
+    ):
         super().__init__(app)
         self.custom_should_warn = should_warn
+        self.get_user = get_user
 
         from .main import glove
 
         self.glove = glove
 
-    def should_warn(self, response: Response):
+    def should_warn(self, response: Response) -> bool:
         if self.custom_should_warn:
             return self.custom_should_warn(response)
         else:
             return response.status_code > 310
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next) -> Response:
         request.state.start_time = get_request_start(request)
-        r = await call_next(request)
-        if self.should_warn(r):
-            logger.warning('"%s", unexpected response: %s', line_one(request), r.status_code)
-        return r
-        # try:
-        #     r = await call_next(request)
-        # except Exception:
-        #     # todo replace this with custom error handling and remove standard sentry middleware
-        #     logger.exception('"%s", %r', line_one(request), exc, extra={'exception_extra': exc_extra(exc)})
-        #     return Response('Internal Server Error', status_code=500)
-        # else:
-        #     if self.should_warn(r):
-        #         logger.warning(f'"%s", unexpected response: %s', line_one(request), r.status_code)
-        #     return r
+
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            await self.log(request, exc=exc)
+            return Response('Internal Server Error', media_type='text/plain', status_code=500)
+        else:
+            if self.should_warn(response):
+                await self.log(request, response=response)
+            return response
+
+    async def log(
+        self, request: Request, *, exc: Optional[Exception] = None, response: Optional[Response] = None
+    ) -> None:
+        extra = dict(duration=f'{(time() - request.state.start_time) * 1000:0.2f}ms', query=dict(request.query_params))
+        user = dict(ip_address=get_ip(request))
+        if get_user := self.get_user:
+            try:
+                user.update(await get_user(request))
+            except Exception:
+                logger.exception('error getting user for middleware logging')
+
+        if response:
+            if hasattr(response, 'body'):
+                response_data = response.body
+            else:
+                body_chunks = []
+                async for chunk in response.body_iterator:
+                    if not isinstance(chunk, bytes):
+                        chunk = chunk.encode(response.charset)
+                    body_chunks.append(chunk)
+
+                response.body_iterator = async_gen_list(body_chunks)
+                response_data = b''.join(body_chunks)
+
+            extra.update(
+                response_status=response.status_code,
+                response_headers=dict(response.headers),
+                response_body=lenient_json(response_data),
+            )
+
+        view_ref = str(request.url.path)
+        event_data = dict(
+            extra=extra,
+            user=user,
+            transaction=view_ref,
+            request=dict(
+                url=str(request.url),
+                query_string=request.url.query,
+                cookies=dict(request.cookies),
+                headers=dict(request.headers),
+                method=request.method,
+                data=getattr(request, '_body', None),
+                inferred_content_type=request.headers.get('Content-Type'),
+            ),
+        )
+
+        if exc:
+            level = 'error'
+            message = f'"{line_one(request)}", {exc!r}'
+            fingerprint = view_ref, repr(exc)
+            request_logger.exception(message, extra=event_data)
+        else:
+            level = 'warning'
+            message = f'"{line_one(request)}", unexpected response: {response.status_code}'
+            request_logger.warning(message, extra=event_data)
+            fingerprint = view_ref, str(response.status_code)
+
+        if glove.settings.sentry_dsn:
+            hint = None
+            if exc:
+                exc_data, hint = event_from_exception(exc_info_from_error(exc))
+                event_data.update(exc_data)
+
+            event_data.update(message=message, level=level, logger='foxglove.request_errors', fingerprint=fingerprint)
+            if not capture_event(event_data, hint):
+                logger.error('sentry not configured, not sending message: %s', message, extra=event_data)
+
+
+async def async_gen_list(list_: List[bytes]) -> AsyncGenerator[bytes, None]:
+    for c in list_:
+        yield c
 
 
 def line_one(request: Request) -> str:
     line = f'{request.method} {request.url.path}'
-    if q := request.scope['query_string']:
-        try:
-            line += f'?{q.decode()}'
-        except ValueError:
-            line += f'?{q}'
+    if q := request.url.query:
+        line += f'?{q}'
     return line
 
 

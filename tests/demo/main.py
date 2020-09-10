@@ -67,6 +67,16 @@ async def create_user(user: UserInfo, conn: BuildPgConnection = Depends(get_db))
     return {'id': 123, 'v': v}
 
 
+@app.get('/error/', status_code=400)
+async def error(error: str = 'raise'):
+    if error == 'RuntimeError':
+        raise RuntimeError('raised RuntimeError')
+    elif error == 'raise':
+        raise exceptions.HttpBadRequest('raised HttpBadRequest')
+    else:
+        return {'error': error}
+
+
 def worker(settings: BaseSettings):
     asyncio.run(aworker(settings))
 

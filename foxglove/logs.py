@@ -101,7 +101,7 @@ def get_env_multiple(*names):
 def setup_sentry() -> bool:
     if glove.settings.sentry_dsn:
         import sentry_sdk
-        from sentry_sdk.integrations.logging import LoggingIntegration
+        from sentry_sdk.integrations.logging import LoggingIntegration, ignore_logger
 
         sentry_sdk.init(
             dsn=glove.settings.sentry_dsn,
@@ -110,6 +110,7 @@ def setup_sentry() -> bool:
             environment=glove.settings.environment,
             server_name=get_env_multiple('DYNO', 'SERVER_NAME', 'HOSTNAME', 'HOST', 'NAME'),
         )
+        ignore_logger('foxglove.bad_requests')
         logger.info('sentry initialised')
         return True
     else:
