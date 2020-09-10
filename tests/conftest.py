@@ -8,17 +8,14 @@ from demo.settings import Settings
 from foxglove import glove
 from foxglove.db import lenient_conn, prepare_database
 from foxglove.db.helpers import DummyPgPool, SyncDb
+from foxglove.testing import Client
 
 commit_transactions = 'KEEP_DB' in os.environ
 
 
 @pytest.fixture(scope='session', name='settings')
 def fix_settings():
-    settings = Settings(
-        dev_mode=False,
-        test_mode=True,
-        # redis_settings='redis://localhost:6379/6',
-    )
+    settings = Settings(dev_mode=False, test_mode=True)
     assert not settings.dev_mode
     glove._settings = settings
 
@@ -65,6 +62,8 @@ async def fix_wipe_db(settings):
 
 @pytest.fixture(name='db_conn')
 async def fix_db_conn(settings, clean_db):
+
+    # with pytest.warns(DeprecationWarning):
     conn = await asyncpg.connect_b(dsn=settings.pg_dsn)
 
     tr = conn.transaction()
@@ -121,3 +120,10 @@ class SyncConnContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._loop.run_until_complete(self._conn.close())
+
+
+@pytest.fixture(name='client')
+def fix_client(settings: Settings, db_conn, glove):
+    app = settings.create_app()
+    with Client(app) as client:
+        yield client

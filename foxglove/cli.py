@@ -53,7 +53,8 @@ def _dev():
     """
     logger.info('running web server at %s in dev mode...', settings.port)
     os.environ.update(
-        foxglove_dev_mode='TRUE', foxglove_root_path=str(ROOT_PATH),
+        foxglove_dev_mode='TRUE',
+        foxglove_root_path=str(ROOT_PATH),
     )
     uvicorn_run(
         settings.asgi_path,

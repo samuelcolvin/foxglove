@@ -15,7 +15,9 @@ __all__ = 'create_pg_pool', 'prepare_database', 'reset_database', 'lenient_conn'
 async def create_pg_pool(settings: BaseSettings) -> asyncpg.BuildPgPool:
     await prepare_database(settings, False)
     return await asyncpg.create_pool_b(
-        settings.pg_dsn, min_size=settings.pg_pool_min_size, max_size=settings.pg_pool_max_size,
+        settings.pg_dsn,
+        min_size=settings.pg_pool_min_size,
+        max_size=settings.pg_pool_max_size,
     )
 
 

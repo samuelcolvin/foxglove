@@ -1,5 +1,6 @@
 import json
 import logging
+import secrets
 from time import time
 from typing import Any, Callable
 
@@ -9,9 +10,11 @@ from starlette.responses import Response
 
 logger = logging.getLogger('foxglove.middleware')
 
+__all__ = 'ErrorMiddleware', 'CsrfMiddleware'
+
 
 class ErrorMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, should_warn: Callable = None):
+    def __init__(self, app, should_warn: Callable[[Response], bool] = None):
         super().__init__(app)
         self.custom_should_warn = should_warn
 
@@ -23,7 +26,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         if self.custom_should_warn:
             return self.custom_should_warn(response)
         else:
-            return response.status_code > 310 and response.status_code not in {401, 404, 422, 470}
+            return response.status_code > 310
 
     async def dispatch(self, request: Request, call_next):
         request.state.start_time = get_request_start(request)
@@ -78,3 +81,32 @@ def lenient_json(v: Any) -> Any:
         except (ValueError, TypeError):
             pass
     return v
+
+
+session_id_key = 'session_id'
+no_cookie_response = """\
+{
+  "message": "Permission Denied, no session set, updates not permitted"
+}
+"""
+
+
+class CsrfMiddleware(BaseHTTPMiddleware):
+    """
+    Ensures a GET request has been made before post requests and that session_id is set in the session.
+
+    This prevents CSRF especially if the cookie has same_site strict
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        session_id = request.session.get(session_id_key)
+        benign_request = request.method in {'HEAD', 'GET', 'OPTIONS'}
+        if not benign_request and session_id is None:
+            return Response(no_cookie_response, media_type='application/json', status_code=403)
+
+        response: Response = await call_next(request)
+
+        # set the session id for any valid GET request
+        if benign_request and response.status_code == 200 and session_id is None:
+            request.session[session_id_key] = secrets.token_urlsafe()
+        return response

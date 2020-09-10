@@ -32,6 +32,9 @@ else:
     pg_dsn_default = 'postgres://postgres@localhost:5432/app'
 
 
+__all__ = ('BaseSettings',)
+
+
 class BaseSettings(PydanticBaseSettings):
     dev_mode: bool = False
     test_mode: bool = False

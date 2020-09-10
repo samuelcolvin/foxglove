@@ -13,6 +13,6 @@ class Settings(BaseSettings):
     patch_paths: List[str] = ['demo.patches']
     pg_dsn = 'postgres://postgres@localhost:5432/foxglove_demo'
     app = 'demo.main:app'
-    redis_settings: Optional[RedisSettings] = None
+    redis_settings: Optional[RedisSettings] = 'redis://localhost:6379/6'
 
     worker_func = 'demo.main:worker'
