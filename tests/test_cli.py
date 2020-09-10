@@ -21,7 +21,7 @@ def test_patches_print():
     assert 'check_args: check args are working right' in result.output
 
 
-def test_patches_check_args():
+def test_patches_check_args(clean_db, loop):
     result = runner.invoke(cli, ['-s', 'demo.settings', 'patch', 'check_args', '-a', 'user_id:123', '-a', 'co:Testing'])
     assert result.exit_code == 0, result.output
     assert "checking args: {'user_id': '123', 'co': 'Testing'}" in result.output
