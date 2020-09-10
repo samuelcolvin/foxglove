@@ -47,7 +47,13 @@ jobs:
       run: make lint
 
     - name: test
-      run: make test
+      run: |
+        make test
+        coverage xml
+
+    - uses: codecov/codecov-action@v1.0.13
+      with:
+        file: ./coverage.xml
 
   deploy:
     name: Deploy
