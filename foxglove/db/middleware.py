@@ -1,11 +1,14 @@
 from typing import Callable
 
+from buildpg.asyncpg import BuildPgConnection
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+__all__ = 'PgMiddleware', 'get_db'
+
 
 class PgMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, check: Callable = None):
+    def __init__(self, app, check: Callable[[Request], bool] = None):
         super().__init__(app)
         self.check = check
 
@@ -20,3 +23,7 @@ class PgMiddleware(BaseHTTPMiddleware):
             async with self.glove.pg.acquire() as conn:
                 request.state.conn = conn
                 return await call_next(request)
+
+
+def get_db(request: Request) -> BuildPgConnection:
+    return request.state.conn

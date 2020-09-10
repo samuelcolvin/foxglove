@@ -20,13 +20,15 @@ from .version import VERSION
 
 logger = logging.getLogger('foxglove.cli')
 
+__all__ = ('cli',)
+
 cli = typer.Typer()
 ROOT_PATH: Path
 settings: BaseSettings
 
 
-@cli.command()
-def web():
+@cli.command(name='web')
+def _web():
     """
     Run the web server using uvicorn.
     """
@@ -44,14 +46,15 @@ def web():
     )
 
 
-@cli.command()
-def dev():
+@cli.command(name='dev')
+def _dev():
     """
     Run the web server using uvicorn for development
     """
     logger.info('running web server at %s in dev mode...', settings.port)
     os.environ.update(
-        foxglove_dev_mode='TRUE', foxglove_root_path=str(ROOT_PATH),
+        foxglove_dev_mode='TRUE',
+        foxglove_root_path=str(ROOT_PATH),
     )
     uvicorn_run(
         settings.asgi_path,
@@ -64,8 +67,8 @@ def dev():
     )
 
 
-@cli.command()
-def worker():
+@cli.command(name='worker')
+def _worker():
     """
     Run the worker command from settings.worker_func.
     """
@@ -78,15 +81,15 @@ def worker():
 
     if settings.worker_func:
         logger.info('running worker...')
-        worker_func: Callable[[BaseSettings], None] = import_from_string(settings.worker_func)
+        worker_func: Callable[..., None] = import_from_string(settings.worker_func)
         # wait_for_services(settings)
         worker_func(settings=settings)
     else:
         raise CliError("settings.worker_func not set, can't run the worker")
 
 
-@cli.command()
-def auto():
+@cli.command(name='auto')
+def _auto():
     """
     Run either the web server or worker depending on the environment variables: FOXGLOVE_COMMAND, DYNO and PORT.
     """
@@ -99,28 +102,28 @@ def _get_auto_command() -> Callable[[], None]:
         logger.info('using environment variable FOXGLOVE_COMMAND=%r to infer command', command_env)
         command_env = command_env.lower()
         if command_env == 'web':
-            return web
+            return _web
         elif command_env == 'worker':
-            return worker
+            return _worker
         elif command_env != 'auto':
             raise CliError(f'Invalid value for FOXGLOVE_COMMAND: {command_env!r}')
 
     if dyno_env := os.getenv('DYNO'):
         logger.info('using environment variable DYNO=%r to infer command', dyno_env)
-        return web if dyno_env.lower().startswith('web') else worker
+        return _web if dyno_env.lower().startswith('web') else _worker
     elif (port_env := os.getenv('PORT')) and port_env.isdigit():
         logger.info('using environment variable PORT=%s to infer command as web', port_env)
-        return web
+        return _web
     else:
         logger.info('no environment variable found to infer command, assuming worker')
-        return worker
+        return _worker
 
 
-@cli.command()
-def patch(
+@cli.command(name='patch')
+def _patch(
     patch_name: str = typer.Argument(None),
     live: bool = False,
-    patch_arg: List[str] = typer.Option(
+    patch_args: List[str] = typer.Option(
         None,
         '--patch-args',
         '-a',
@@ -137,12 +140,12 @@ def patch(
     for path in settings.patch_paths:
         import_module(path)
 
-    arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_arg)}
+    arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_args)}
     return run_patch(patch_name, live, arg_lookup)
 
 
-@cli.command()
-def reset_database():
+@cli.command(name='reset_database')
+def _reset_database():
     """
     Delete the main database and recreate it empty. THIS CAN BE DESTRUCTIVE!
     """
@@ -152,8 +155,8 @@ def reset_database():
     reset_database(settings)
 
 
-@cli.command()
-def flush_redis():
+@cli.command(name='flush_redis')
+def _flush_redis():
     """
     Empty the redis cache.
     """
@@ -163,8 +166,8 @@ def flush_redis():
     flush_redis(settings)
 
 
-@cli.command()
-def shell():
+@cli.command(name='shell')
+def _shell():
     """
     Run an interactive python shell.
     """
@@ -221,9 +224,9 @@ def callback(
         return
     global ROOT_PATH, settings
 
-    sys.path.append(os.getcwd())
+    sys.path.insert(0, os.getcwd())
     ROOT_PATH = Path(root).resolve()
-    sys.path.append(str(ROOT_PATH))
+    sys.path.insert(0, str(ROOT_PATH))
     os.chdir(str(ROOT_PATH))
 
     if settings_path is None:
@@ -241,6 +244,7 @@ def callback(
     try:
         settings = glove.settings
     except RuntimeError as exc:
+        # TODO print stack in verbose mode
         raise CliError(str(exc)) from exc
     setup_logging()
 

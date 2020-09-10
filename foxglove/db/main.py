@@ -4,6 +4,7 @@ import os
 
 from async_timeout import timeout
 from buildpg import asyncpg
+from buildpg.asyncpg import BuildPgConnection
 
 from ..settings import BaseSettings
 
@@ -14,7 +15,9 @@ __all__ = 'create_pg_pool', 'prepare_database', 'reset_database', 'lenient_conn'
 async def create_pg_pool(settings: BaseSettings) -> asyncpg.BuildPgPool:
     await prepare_database(settings, False)
     return await asyncpg.create_pool_b(
-        settings.pg_dsn, min_size=settings.pg_pool_min_size, max_size=settings.pg_pool_max_size,
+        settings.pg_dsn,
+        min_size=settings.pg_pool_min_size,
+        max_size=settings.pg_pool_max_size,
     )
 
 
@@ -101,7 +104,7 @@ def reset_database(settings: BaseSettings):
         logger.info('done.')
 
 
-async def lenient_conn(settings: BaseSettings, with_db=True):
+async def lenient_conn(settings: BaseSettings, *, with_db: bool = True, sleep: float = 1) -> BuildPgConnection:
     if with_db:
         dsn = settings.pg_dsn
     else:
@@ -116,7 +119,7 @@ async def lenient_conn(settings: BaseSettings, with_db=True):
                 raise
             else:
                 logger.warning('pg temporary connection error "%s", %d retries remaining...', e, retry)
-                await asyncio.sleep(1)
+                await asyncio.sleep(sleep)
         else:
             log = logger.debug if retry == 8 else logger.info
             log('pg connection successful, version: %s', await conn.fetchval('SELECT version()'))
