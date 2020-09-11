@@ -8,6 +8,7 @@ from demo.settings import Settings
 from foxglove import glove
 from foxglove.db import lenient_conn, prepare_database
 from foxglove.db.helpers import DummyPgPool, SyncDb
+from foxglove.test_server import create_dummy_server
 from foxglove.testing import Client
 
 commit_transactions = 'KEEP_DB' in os.environ
@@ -38,16 +39,6 @@ async def _fix_db_conn_global(settings):
     await conn.close()
 
 
-@pytest.fixture(name='loop')
-def fix_loop(settings):
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop
-
-
 @pytest.fixture(scope='session', name='clean_db')
 def fix_clean_db(settings):
     asyncio.run(prepare_database(settings, True))
@@ -62,8 +53,6 @@ async def fix_wipe_db(settings):
 
 @pytest.fixture(name='db_conn')
 async def fix_db_conn(settings, clean_db):
-
-    # with pytest.warns(DeprecationWarning):
     conn = await asyncpg.connect_b(dsn=settings.pg_dsn)
 
     tr = conn.transaction()
@@ -136,3 +125,8 @@ def fix_client_sentry(settings: Settings, db_conn, glove):
     app = settings.create_app()
     with Client(app) as client:
         yield client
+
+
+@pytest.fixture(name='dummy_server')
+async def _fix_dummy_server(loop, aiohttp_server):
+    return await create_dummy_server(aiohttp_server)
