@@ -3,7 +3,7 @@ import logging
 import re
 import secrets
 from time import time
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional
 
 from sentry_sdk import capture_event
 from sentry_sdk.utils import event_from_exception, exc_info_from_error
@@ -36,7 +36,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
 
         self.glove = glove
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         try:
             request.state.start_time = get_request_start(request)
 
@@ -72,7 +72,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
                 response_body=lenient_json(await self.response_body(response)),
             )
 
-        view_ref = re.sub(r'\d{2,}', '{id}', str(request.url.path))
+        view_ref = re.sub(r'\d{2,}', '{number}', str(request.url.path))
         event_data = dict(
             extra=extra,
             user=await self.user_info(request),
@@ -83,7 +83,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
                 cookies=dict(request.cookies),
                 headers=dict(request.headers),
                 method=request.method,
-                data=getattr(request, '_body', None),
+                data=lenient_json(getattr(request, '_body', None)),
                 inferred_content_type=request.headers.get('Content-Type'),
             ),
         )
@@ -91,13 +91,13 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         if exc:
             level = 'error'
             message = f'"{line_one(request)}", {exc!r}'
-            fingerprint = view_ref, repr(exc)
+            fingerprint = view_ref, request.method, repr(exc)
             request_logger.exception(message, extra=event_data)
         else:
             level = 'warning'
             message = f'"{line_one(request)}", unexpected response: {response.status_code}'
             request_logger.warning(message, extra=event_data)
-            fingerprint = view_ref, str(response.status_code)
+            fingerprint = view_ref, request.method, str(response.status_code)
 
         if glove.settings.sentry_dsn:
             hint = None
@@ -125,7 +125,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         return user
 
     @staticmethod
-    async def response_body(response: Response) -> Union[str, bytes]:
+    async def response_body(response: Response) -> bytes:
         if hasattr(response, 'body'):
             return response.body
         else:
@@ -158,7 +158,7 @@ def get_request_start(request):
         return time()
 
 
-def exc_extra(exc):
+def exc_extra(exc: Exception):
     exception_extra = getattr(exc, 'extra', None)
     if exception_extra:
         try:
@@ -193,13 +193,13 @@ class CsrfMiddleware(BaseHTTPMiddleware):
     This prevents CSRF especially if the cookie has same_site strict
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         session_id = request.session.get(session_id_key)
         benign_request = request.method in {'HEAD', 'GET', 'OPTIONS'}
         if not benign_request and session_id is None:
             return Response(no_cookie_response, media_type='application/json', status_code=403)
 
-        response: Response = await call_next(request)
+        response = await call_next(request)
 
         # set the session id for any valid GET request
         if benign_request and response.status_code == 200 and session_id is None:
