@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pytest
 
@@ -51,14 +52,21 @@ def test_offline_online(loop):
 
 
 def test_offline_offline(mocker, loop, capsys):
-    m = mocker.patch('aiodns.DNSResolver.query', side_effect=asyncio.TimeoutError)
-    o = Offline(loop)
-    assert bool(o) is True
-    assert bool(o) is True
-    m.assert_called_once()
-    captured = capsys.readouterr()
-    assert captured.out == ''
-    assert captured.err == '\nnot online: TimeoutError \n\n'
+    ci_value = os.getenv('CI')
+    if ci_value:
+        del os.environ['CI']
+    try:
+        m = mocker.patch('aiodns.DNSResolver.query', side_effect=asyncio.TimeoutError)
+        o = Offline(loop)
+        assert bool(o) is True
+        assert bool(o) is True
+        m.assert_called_once()
+        captured = capsys.readouterr()
+        assert captured.out == ''
+        assert captured.err == '\nnot online: TimeoutError \n\n'
+    finally:
+        if ci_value:
+            os.environ['CI'] = ci_value
 
 
 _offline = Offline()
@@ -67,4 +75,4 @@ skip_if_offline = pytest.mark.skipif(_offline, reason='not online')
 
 @skip_if_offline
 def test_offline_decorator():
-    print('we online!')
+    print("we're online!")

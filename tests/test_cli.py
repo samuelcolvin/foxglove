@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from typer.testing import CliRunner
 
@@ -86,7 +88,10 @@ def test_auto_web(mocker):
 
 @pytest.mark.filterwarnings('ignore::DeprecationWarning')
 def test_worker():
-    result = runner.invoke(cli, ['-s', 'demo.settings', 'worker'])
-    assert result.exit_code == 0, result.output
-    assert 'running worker...' in result.output
-    assert 'running demo worker function, ans: 256' in result.output
+    try:
+        result = runner.invoke(cli, ['-s', 'demo.settings', 'worker'])
+        assert result.exit_code == 0, result.output
+        assert 'running worker...' in result.output
+        assert 'running demo worker function, ans: 256' in result.output
+    finally:
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
