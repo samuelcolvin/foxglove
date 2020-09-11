@@ -83,7 +83,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
                 cookies=dict(request.cookies),
                 headers=dict(request.headers),
                 method=request.method,
-                data=getattr(request, '_body', None),
+                data=lenient_json(getattr(request, '_body', None)),
                 inferred_content_type=request.headers.get('Content-Type'),
             ),
         )
