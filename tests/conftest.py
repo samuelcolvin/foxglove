@@ -39,6 +39,16 @@ async def _fix_db_conn_global(settings):
     await conn.close()
 
 
+@pytest.fixture(name='loop')
+def fix_loop(settings):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop
+
+
 @pytest.fixture(scope='session', name='clean_db')
 def fix_clean_db(settings):
     asyncio.run(prepare_database(settings, True))
@@ -128,5 +138,7 @@ def fix_client_sentry(settings: Settings, db_conn, glove):
 
 
 @pytest.fixture(name='dummy_server')
-async def _fix_dummy_server(loop, aiohttp_server):
-    return await create_dummy_server(aiohttp_server)
+async def _fix_dummy_server(loop):
+    ds = await create_dummy_server(loop)
+    yield ds
+    await ds.stop()

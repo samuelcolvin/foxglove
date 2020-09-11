@@ -37,17 +37,22 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         self.glove = glove
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        request.state.start_time = get_request_start(request)
-
         try:
-            response = await call_next(request)
-        except Exception as exc:
-            await self.log(request, exc=exc)
-            return Response('Internal Server Error', media_type='text/plain', status_code=500)
-        else:
-            if self.should_warn(response):
-                await self.log(request, response=response)
-            return response
+            request.state.start_time = get_request_start(request)
+
+            try:
+                response = await call_next(request)
+            except Exception as exc:
+                await self.log(request, exc=exc)
+                return Response('Internal Server Error', media_type='text/plain', status_code=500)
+            else:
+                if self.should_warn(response):
+                    await self.log(request, response=response)
+                return response
+        except Exception:  # pragma: no cover
+            # not sure if this is required, but better to keep it
+            logger.critical('unhandled error in ErrorMiddleware', exc_info=True)
+            raise
 
     async def log(
         self, request: Request, *, exc: Optional[Exception] = None, response: Optional[Response] = None

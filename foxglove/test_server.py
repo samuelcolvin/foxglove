@@ -10,6 +10,7 @@ from aiohttp.web import Application
 from aiohttp.web_exceptions import HTTPException
 from aiohttp.web_middlewares import middleware
 from aiohttp.web_response import Response, json_response
+from async_timeout import timeout
 
 __all__ = 'create_dummy_server', 'DummyServer', 'Offline'
 
@@ -67,14 +68,23 @@ class DummyServer:
     log: List
     server_name: str
 
+    async def stop(self):
+        await self.server.close()
 
-async def create_dummy_server(create_server, *, extra_routes=None, extra_context=None) -> DummyServer:
+
+async def create_dummy_server(loop, *, extra_routes=None, extra_context=None) -> DummyServer:
+    """
+    Setup and start a dummy server to accept HTTP requests for testing
+    """
     app = create_dummy_app()
     if extra_routes:
         app.add_routes(extra_routes)
     if extra_context:
         app.update(extra_context)
-    server = await create_server(app)
+
+    server = TestServer(app)
+    await server.start_server(loop=loop)
+
     return DummyServer(server, app, app['log'], f'http://localhost:{server.port}')
 
 
@@ -85,6 +95,10 @@ class Offline:
     Usage:
         _offline = Offline()
         skip_if_offline = pytest.mark.skipif(_offline, reason='not online')
+
+        @skip_if_offline
+        def test_whatever():
+            ...
     """
 
     def __init__(self, loop=None):
@@ -104,7 +118,6 @@ class Offline:
             return False
 
         import aiodns
-        from async_timeout import timeout
 
         resolver = aiodns.DNSResolver()
         try:
