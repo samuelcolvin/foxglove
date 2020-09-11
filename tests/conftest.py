@@ -127,3 +127,12 @@ def fix_client(settings: Settings, db_conn, glove):
     app = settings.create_app()
     with Client(app) as client:
         yield client
+
+
+@pytest.fixture(name='client_sentry')
+def fix_client_sentry(settings: Settings, db_conn, glove):
+    settings.sentry_dsn = 'https://123@example.com/789'
+    glove._settings = settings
+    app = settings.create_app()
+    with Client(app) as client:
+        yield client

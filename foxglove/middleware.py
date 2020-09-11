@@ -1,14 +1,16 @@
 import json
 import logging
+import re
 import secrets
 from time import time
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional, Union
 
 from sentry_sdk import capture_event
 from sentry_sdk.utils import event_from_exception, exc_info_from_error
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.routing import get_name as get_endpoint_name
 
 from . import glove
 from .utils import get_ip
@@ -34,12 +36,6 @@ class ErrorMiddleware(BaseHTTPMiddleware):
 
         self.glove = glove
 
-    def should_warn(self, response: Response) -> bool:
-        if self.custom_should_warn:
-            return self.custom_should_warn(response)
-        else:
-            return response.status_code > 310
-
     async def dispatch(self, request: Request, call_next) -> Response:
         request.state.start_time = get_request_start(request)
 
@@ -57,39 +53,24 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         self, request: Request, *, exc: Optional[Exception] = None, response: Optional[Response] = None
     ) -> None:
         extra = dict(duration=f'{(time() - request.state.start_time) * 1000:0.2f}ms', query=dict(request.query_params))
-        user = dict(ip_address=get_ip(request))
-        if get_user := self.get_user:
-            try:
-                user.update(await get_user(request))
-            except Exception:
-                logger.exception('error getting user for middleware logging')
+        if endpoint := request.scope.get('endpoint'):
+            extra.update(route_endpoint=get_endpoint_name(endpoint), path_params=dict(request.path_params))
 
-        if response:
-            if hasattr(response, 'body'):
-                response_data = response.body
-            else:
-                body_chunks = []
-                async for chunk in response.body_iterator:
-                    if not isinstance(chunk, bytes):
-                        chunk = chunk.encode(response.charset)
-                    body_chunks.append(chunk)
-
-                response.body_iterator = async_gen_list(body_chunks)
-                response_data = b''.join(body_chunks)
+        if exc:
+            extra['exception_extra'] = exc_extra(exc)
+        else:
+            assert response is not None
 
             extra.update(
                 response_status=response.status_code,
                 response_headers=dict(response.headers),
-                response_body=lenient_json(response_data),
+                response_body=lenient_json(await self.response_body(response)),
             )
 
-        if exc:
-            extra['exception_extra'] = exc_extra(exc)
-
-        view_ref = str(request.url.path)
+        view_ref = re.sub(r'\d{2,}', '{id}', str(request.url.path))
         event_data = dict(
             extra=extra,
-            user=user,
+            user=await self.user_info(request),
             transaction=view_ref,
             request=dict(
                 url=str(request.url),
@@ -122,6 +103,35 @@ class ErrorMiddleware(BaseHTTPMiddleware):
             event_data.update(message=message, level=level, logger='foxglove.request_errors', fingerprint=fingerprint)
             if not capture_event(event_data, hint):
                 logger.error('sentry not configured, not sending message: %s', message, extra=event_data)
+
+    def should_warn(self, response: Response) -> bool:
+        if self.custom_should_warn:
+            return self.custom_should_warn(response)
+        else:
+            return response.status_code > 310
+
+    async def user_info(self, request: Request) -> Dict[str, Any]:
+        user = dict(ip_address=get_ip(request))
+        if get_user := self.get_user:
+            try:
+                user.update(await get_user(request))
+            except Exception:
+                logger.exception('error getting user for middleware logging')
+        return user
+
+    @staticmethod
+    async def response_body(response: Response) -> Union[str, bytes]:
+        if hasattr(response, 'body'):
+            return response.body
+        else:
+            body_chunks = []
+            async for chunk in response.body_iterator:
+                if not isinstance(chunk, bytes):
+                    chunk = chunk.encode(response.charset)
+                body_chunks.append(chunk)
+
+            response.body_iterator = async_gen_list(body_chunks)
+            return b''.join(body_chunks)
 
 
 async def async_gen_list(list_: List[bytes]) -> AsyncGenerator[bytes, None]:
