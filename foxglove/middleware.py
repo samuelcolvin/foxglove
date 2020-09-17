@@ -107,7 +107,11 @@ class ErrorMiddleware(BaseHTTPMiddleware):
 
             event_data.update(message=message, level=level, logger='foxglove.request_errors', fingerprint=fingerprint)
             if not capture_event(event_data, hint):
-                logger.error('sentry not configured, not sending message: %s', message, extra=event_data)
+                logger.critical(
+                    'sentry not configured correctly, not sending message: %s',
+                    message,
+                    extra={'event_data': event_data},
+                )
 
     def should_warn(self, response: Response) -> bool:
         if self.custom_should_warn:

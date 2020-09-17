@@ -52,10 +52,7 @@ def _dev():
     Run the web server using uvicorn for development
     """
     logger.info('running web server at %s in dev mode...', settings.port)
-    os.environ.update(
-        foxglove_dev_mode='TRUE',
-        foxglove_root_path=str(ROOT_PATH),
-    )
+    os.environ.update(foxglove_dev_mode='TRUE', foxglove_root_path=str(ROOT_PATH))
     uvicorn_run(
         settings.asgi_path,
         debug=True,

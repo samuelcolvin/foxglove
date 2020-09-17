@@ -122,15 +122,16 @@ async def update_enums(enums: Dict[str, Type[Enum]], conn):
             await conn.execute(f"ALTER TYPE {name} ADD VALUE IF NOT EXISTS '{t.value}'")
 
 
-async def run_sql_section(chunk_name, sql, conn):
+async def run_sql_section(section_name, sql, conn):
     """
     Run a section of a sql string (eg. settings.sql) based on tags in the following format:
         -- { <chunk name>
         <sql to run>
         -- } <chunk name>
     """
-    m = re.search(f'^-- *{{+ *{chunk_name}(.*)^-- *}}+ *{chunk_name}', sql, flags=re.DOTALL | re.MULTILINE)
+    m = re.search(f'^-- *{{+ *{section_name}(.*)^-- *}}+ *{section_name}', sql, flags=re.DOTALL | re.MULTILINE)
     if not m:
-        raise RuntimeError(f'chunk with name "{chunk_name}" not found')
+        raise RuntimeError(f'chunk with name "{section_name}" not found')
+    logger.info('run_sql_section running section "%s"', section_name)
     sql = m.group(1).strip(' \n')
     await conn.execute(sql)
