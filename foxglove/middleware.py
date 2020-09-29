@@ -23,40 +23,12 @@ request_logger = logging.getLogger('foxglove.bad_requests')
 CallNext = Callable[[Request], Awaitable[Response]]
 
 __all__ = (
-    'KeepBodyAPIRoute',
     'ErrorMiddleware',
     'CsrfMiddleware',
     'HostRedirectMiddleware',
     'CloudflareCheckMiddleware',
     'request_log_extra',
 )
-
-KeepBodyAPIRoute = None
-
-try:
-    from fastapi.routing import APIRoute
-except ImportError:
-    pass
-else:
-
-    class KeepBodyRequest(Request):
-        async def body(self) -> bytes:
-            if not hasattr(self, '_body'):
-                chunks = []
-                async for chunk in self.stream():
-                    chunks.append(chunk)
-                self.scope['_body'] = self._body = b''.join(chunks)
-            return self._body
-
-    class KeepBodyAPIRoute(APIRoute):
-        def get_route_handler(self) -> Callable:
-            original_route_handler = super().get_route_handler()
-
-            async def custom_route_handler(request: Request) -> Response:
-                request = KeepBodyRequest(request.scope, request.receive)
-                return await original_route_handler(request)
-
-            return custom_route_handler
 
 
 class ErrorMiddleware(BaseHTTPMiddleware):

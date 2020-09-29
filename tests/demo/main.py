@@ -10,7 +10,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from foxglove import BaseSettings, exceptions, glove
 from foxglove.db import PgMiddleware
 from foxglove.db.middleware import get_db
-from foxglove.middleware import CsrfMiddleware, ErrorMiddleware, KeepBodyAPIRoute
+from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
+from foxglove.route_class import KeepBodyAPIRoute
 
 logger = logging.getLogger('main')
 
