@@ -147,8 +147,6 @@ async def request_log_extra(
             response_body=lenient_json(await get_response_body(response)),
         )
 
-    extra['request_data'] = request_data = lenient_json(request.scope.get('_body'))
-
     return dict(
         extra=extra,
         user=dict(ip_address=get_ip(request)),
@@ -159,7 +157,7 @@ async def request_log_extra(
             cookies=dict(request.cookies),
             headers=dict(request.headers),
             method=request.method,
-            data=request_data,
+            data=lenient_json(request.scope.get('_body')),
             inferred_content_type=request.headers.get('Content-Type'),
         ),
     )
