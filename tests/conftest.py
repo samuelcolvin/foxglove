@@ -3,6 +3,8 @@ import os
 
 import pytest
 from buildpg import asyncpg
+from starlette.requests import Request
+from starlette.responses import Response
 
 from demo.settings import Settings
 from foxglove import glove
@@ -142,3 +144,50 @@ async def _fix_dummy_server(loop):
     ds = await create_dummy_server(loop)
     yield ds
     await ds.stop()
+
+
+@pytest.fixture(name='create_request')
+def _fix_create_request(settings: Settings):
+    app = settings.create_app()
+
+    async def endpoint(request: Request):
+        return Response()
+
+    class CreateRequest:
+        def __init__(self, _app):
+            self.app = _app
+
+        def __call__(self, method='GET', path='/', headers=None, client_addr='testclient', **extra_scope):
+            _headers = {'host': 'testserver', 'user-agent': 'testclient', 'connection': 'keep-alive'}
+            if headers:
+                _headers.update(headers)
+            scope = {
+                'type': 'http',
+                'http_version': '1.1',
+                'method': method,
+                'path': path,
+                'root_path': '',
+                'scheme': 'http',
+                'query_string': b'',
+                'headers': [(k.lower().encode(), v.encode()) for k, v in _headers.items()],
+                'client': [
+                    client_addr,
+                    50000,
+                ],
+                'server': [
+                    'testserver',
+                    80,
+                ],
+                'extensions': {
+                    'http.response.template': {},
+                },
+                'app': app,
+                'state': {},
+                'session': {},
+                'endpoint': endpoint,
+                'path_params': {},
+                **extra_scope,
+            }
+            return Request(scope, None, None)
+
+    return CreateRequest(app)
