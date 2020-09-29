@@ -22,7 +22,41 @@ logger = logging.getLogger('foxglove.middleware')
 request_logger = logging.getLogger('foxglove.bad_requests')
 CallNext = Callable[[Request], Awaitable[Response]]
 
-__all__ = 'ErrorMiddleware', 'CsrfMiddleware'
+__all__ = (
+    'KeepBodyAPIRoute',
+    'ErrorMiddleware',
+    'CsrfMiddleware',
+    'HostRedirectMiddleware',
+    'CloudflareCheckMiddleware',
+    'request_log_extra',
+)
+
+KeepBodyAPIRoute = None
+
+try:
+    from fastapi.routing import APIRoute
+except ImportError:
+    pass
+else:
+
+    class KeepBodyRequest(Request):
+        async def body(self) -> bytes:
+            if not hasattr(self, '_body'):
+                chunks = []
+                async for chunk in self.stream():
+                    chunks.append(chunk)
+                self.scope['_body'] = self._body = b''.join(chunks)
+            return self._body
+
+    class KeepBodyAPIRoute(APIRoute):
+        def get_route_handler(self) -> Callable:
+            original_route_handler = super().get_route_handler()
+
+            async def custom_route_handler(request: Request) -> Response:
+                request = KeepBodyRequest(request.scope, request.receive)
+                return await original_route_handler(request)
+
+            return custom_route_handler
 
 
 class ErrorMiddleware(BaseHTTPMiddleware):
@@ -61,36 +95,9 @@ class ErrorMiddleware(BaseHTTPMiddleware):
     async def log(
         self, request: Request, *, exc: Optional[Exception] = None, response: Optional[Response] = None
     ) -> None:
-        extra = dict(duration=f'{(time() - request.state.start_time) * 1000:0.2f}ms', query=dict(request.query_params))
-        if endpoint := request.scope.get('endpoint'):
-            extra.update(route_endpoint=get_endpoint_name(endpoint), path_params=dict(request.path_params))
-
-        if exc:
-            extra['exception_extra'] = exc_extra(exc)
-        else:
-            assert response is not None
-
-            extra.update(
-                response_status=response.status_code,
-                response_headers=dict(response.headers),
-                response_body=lenient_json(await self.response_body(response)),
-            )
-
-        view_ref = re.sub(r'\d{2,}', '{number}', str(request.url.path))
-        event_data = dict(
-            extra=extra,
-            user=await self.user_info(request),
-            transaction=view_ref,
-            request=dict(
-                url=str(request.url),
-                query_string=request.url.query,
-                cookies=dict(request.cookies),
-                headers=dict(request.headers),
-                method=request.method,
-                data=lenient_json(getattr(request, '_body', None)),
-                inferred_content_type=request.headers.get('Content-Type'),
-            ),
-        )
+        event_data = await request_log_extra(request, exc, response)
+        event_data['user'] = await self.user_info(request)
+        view_ref = event_data['transaction']
 
         if exc:
             level = 'error'
@@ -98,6 +105,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
             fingerprint = view_ref, request.method, repr(exc)
             request_logger.exception(message, extra=event_data)
         else:
+            assert response is not None
             level = 'warning'
             message = f'"{line_one(request)}", unexpected response: {response.status_code}'
             request_logger.warning(message, extra=event_data)
@@ -145,6 +153,56 @@ class ErrorMiddleware(BaseHTTPMiddleware):
 
             response.body_iterator = async_gen_list(body_chunks)
             return b''.join(body_chunks)
+
+
+async def request_log_extra(
+    request: Request, exc: Optional[Exception] = None, response: Optional[Response] = None
+) -> Dict[str, Any]:
+    extra = dict(query=dict(request.query_params))
+
+    if start_time := getattr(request.state, 'start_time', None):
+        extra['duration'] = f'{(time() - start_time) * 1000:0.2f}ms'
+
+    if endpoint := request.scope.get('endpoint'):
+        extra.update(route_endpoint=get_endpoint_name(endpoint), path_params=dict(request.path_params))
+
+    if exc:
+        extra['exception_extra'] = exc_extra(exc)
+    elif response:
+        extra.update(
+            response_status=response.status_code,
+            response_headers=dict(response.headers),
+            response_body=lenient_json(await get_response_body(response)),
+        )
+
+    return dict(
+        extra=extra,
+        user=dict(ip_address=get_ip(request)),
+        transaction=re.sub(r'/\d{2,}/', '/{number}/', str(request.url.path)),
+        request=dict(
+            url=str(request.url),
+            query_string=request.url.query,
+            cookies=dict(request.cookies),
+            headers=dict(request.headers),
+            method=request.method,
+            data=lenient_json(request.scope.get('_body')),
+            inferred_content_type=request.headers.get('Content-Type'),
+        ),
+    )
+
+
+async def get_response_body(response: Response) -> bytes:
+    if hasattr(response, 'body'):
+        return response.body
+    else:
+        body_chunks = []
+        async for chunk in response.body_iterator:
+            if not isinstance(chunk, bytes):
+                chunk = chunk.encode(response.charset)
+            body_chunks.append(chunk)
+
+        response.body_iterator = async_gen_list(body_chunks)
+        return b''.join(body_chunks)
 
 
 async def async_gen_list(list_: List[bytes]) -> AsyncGenerator[bytes, None]:
@@ -239,11 +297,11 @@ class IPRangeCounter:
 
 
 class CloudflareCheckMiddleware(BaseHTTPMiddleware):
-    default_response_text = b'Request incorrectly routed, this looks like a problem with your DNS or Proxy.'
+    default_response_body = b'Request incorrectly routed, this looks like a problem with your DNS or Proxy.'
 
     def __init__(self, app: Starlette, response_text: str = None):
         super().__init__(app)
-        self.response_body = response_text.encode() if response_text else self.default_response_text
+        self.response_body = response_text.encode() if response_text else self.default_response_body
         # got from https://www.cloudflare.com/ips/
         self.ip_ranges = [
             IPRangeCounter('173.245.48.0/20'),
@@ -274,7 +332,8 @@ class CloudflareCheckMiddleware(BaseHTTPMiddleware):
         if client and self.find_network(client[0]):
             return await call_next(request)
 
-        logger.warning('Request not routed through CloudFlare, client: %s', client)
+        extra = {'extra': await request_log_extra(request)}
+        logger.warning('Request not routed through cloudflare client=%s url="%s"', client, request.url, extra=extra)
         return Response(self.response_body, status_code=400)
 
     def find_network(self, ip: str) -> bool:

@@ -10,7 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from foxglove import BaseSettings, exceptions, glove
 from foxglove.db import PgMiddleware
 from foxglove.db.middleware import get_db
-from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
+from foxglove.middleware import CsrfMiddleware, ErrorMiddleware, KeepBodyAPIRoute
 
 logger = logging.getLogger('main')
 
@@ -42,6 +42,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url='/docs',
 )
+app.router.route_class = KeepBodyAPIRoute
 
 
 @app.exception_handler(exceptions.HttpMessageError)
@@ -50,10 +51,8 @@ async def foxglove_exception_handler(request: Request, exc: exceptions.HttpMessa
 
 
 @app.get('/')
-def index(request: Request):
-    from devtools import debug
-
-    debug(request.scope)
+async def index(request: Request):
+    debug(id(request), await request.body())
     return {'app': 'foxglove-demo'}
 
 
