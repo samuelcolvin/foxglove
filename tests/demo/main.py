@@ -52,7 +52,6 @@ async def foxglove_exception_handler(request: Request, exc: exceptions.HttpMessa
 
 @app.get('/')
 async def index(request: Request):
-    debug(id(request), await request.body())
     return {'app': 'foxglove-demo'}
 
 
