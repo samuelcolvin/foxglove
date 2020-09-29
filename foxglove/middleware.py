@@ -249,6 +249,7 @@ class HostRedirectMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Starlette, host: str = None):
         super().__init__(app)
         self.host = host or glove.settings.domain
+        assert self.host, 'host must not be None in HostRedirectMiddleware'
 
     async def dispatch(self, request: Request, call_next: CallNext) -> Response:
         if request.url.hostname == self.host:
