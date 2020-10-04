@@ -76,12 +76,14 @@ class BaseSettings(PydanticBaseSettings):
     csrf_cross_origin_paths: List[Pattern] = []
     cross_origin_origins: List[Pattern] = []
 
-    grecaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
+    recaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
 
     # this is the test key from https://developers.google.com/recaptcha/docs/faq, or
     # https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
     # you'll need to change it for production
-    grecaptcha_secret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+    recaptcha_secret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+    # expected host for recaptcha requests, testkey.google.com will be the hostname using the test token
+    recaptcha_hostname = 'testkey.google.com'
 
     @property
     def sql(self):
