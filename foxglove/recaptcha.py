@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional
 
 from starlette.requests import Request
@@ -25,9 +26,14 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
     r.raise_for_status()
     data = r.json()
 
+    request_host = request.url.hostname
+    # using the origin here if available instead of host avoids problems when requests are proxied e.g. with netlify
+    if origin := request.headers.get('origin'):
+        request_host = re.sub('^https?://', '', origin)
+
     if data['success']:
         hostname = data['hostname']
-        if hostname == request.url.hostname:
+        if hostname == request_host:
             logger.info('recaptcha success')
             return
         elif settings.dev_mode and settings.recaptcha_secret == TESTING_SECRET and hostname == 'testkey.google.com':
@@ -37,7 +43,7 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
     logger.warning(
         'recaptcha failure, path=%s request_host=%s ip=%s response=%s',
         request.url.path,
-        request.url.hostname,
+        request_host,
         client_ip,
         r.text,
         extra={'data': {'recaptcha_response': data, 'recaptcha_token': recaptcha_token}},
