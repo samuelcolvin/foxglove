@@ -27,7 +27,6 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
 
     if data['success']:
         hostname = data['hostname']
-        debug(hostname, request.url.hostname)
         if hostname == request.url.hostname:
             logger.info('recaptcha success')
             return
