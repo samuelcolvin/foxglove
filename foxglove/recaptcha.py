@@ -24,11 +24,9 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
     r.raise_for_status()
     data = r.json()
 
-    if data['success']:
-        hostname = data['hostname']
-        if settings.recaptcha_hostname == hostname:
-            logger.info('recaptcha success')
-            return
+    if data['success'] and data['hostname'] == settings.recaptcha_hostname:
+        logger.info('recaptcha success')
+        return
 
     logger.warning(
         'recaptcha failure, path="%s" expected_host=%s ip=%s response=%s',
@@ -36,7 +34,7 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
         settings.recaptcha_hostname,
         client_ip,
         r.text,
-        extra={'data': {'recaptcha_response': data}},
+        extra={'data': {'recaptcha_response': data, 'recaptcha_token': recaptcha_token}},
     )
     raise exceptions.HttpBadRequest('Invalid recaptcha value', headers=error_headers)
 
