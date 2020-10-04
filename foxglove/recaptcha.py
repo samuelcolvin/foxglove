@@ -36,7 +36,7 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
         request.url.path,
         settings.recaptcha_hostname,
         client_ip,
-        data,
+        r.text,
         extra={'data': {'recaptcha_response': data}},
     )
     raise exceptions.HttpBadRequest('Invalid recaptcha value', headers=error_headers)

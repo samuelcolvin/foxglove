@@ -33,7 +33,7 @@ def test_wrong_host(client: Client, settings, dummy_server: DummyServer, caplog)
     assert [
         (
             'recaptcha failure, path="/captcha-check/" expected_host=testkey.google.com ip=testclient '
-            'response={\'success\': True, \'hostname\': \'__wrong_host__\'}'
+            'response={"success": true, "hostname": "__wrong_host__"}'
         ),
     ] == logs
 
@@ -50,6 +50,6 @@ def test_bad_token(client: Client, settings, dummy_server: DummyServer, caplog):
     assert [
         (
             'recaptcha failure, path="/captcha-check/" expected_host=testkey.google.com ip=testclient '
-            'response={\'success\': False, \'hostname\': \'testkey.google.com\'}'
+            'response={"success": false, "hostname": "testkey.google.com"}'
         ),
     ] == logs
