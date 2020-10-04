@@ -1,7 +1,6 @@
 import logging
-from typing import Callable, Optional
+from typing import Optional
 
-from pydantic import BaseModel
 from starlette.requests import Request
 
 from . import exceptions, glove
