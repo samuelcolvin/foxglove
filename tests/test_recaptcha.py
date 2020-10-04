@@ -30,12 +30,11 @@ def test_wrong_host(client: Client, settings, dummy_server: DummyServer, caplog)
     }
     assert dummy_server.log == ['POST /recaptcha_url/ > 200 (recaptcha __wrong_host__)']
     logs = [r.message for r in caplog.records if r.name == 'foxglove.recaptcha']
-    assert [
-        (
-            'recaptcha failure, path="/captcha-check/" expected_host=testkey.google.com ip=testclient '
-            'response={"success": true, "hostname": "__wrong_host__"}'
-        ),
-    ] == logs
+    assert len(logs) == 1
+    assert logs[0] == (
+        'recaptcha failure, path=/captcha-check/ request_host=testserver ip=testclient '
+        'response={"success": true, "hostname": "__wrong_host__"}'
+    )
 
 
 def test_bad_token(client: Client, settings, dummy_server: DummyServer, caplog):
@@ -47,9 +46,8 @@ def test_bad_token(client: Client, settings, dummy_server: DummyServer, caplog):
     }
     assert dummy_server.log == ['POST /recaptcha_url/ > 200 (recaptcha bad)']
     logs = [r.message for r in caplog.records if r.name == 'foxglove.recaptcha']
-    assert [
-        (
-            'recaptcha failure, path="/captcha-check/" expected_host=testkey.google.com ip=testclient '
-            'response={"success": false, "hostname": "testkey.google.com"}'
-        ),
-    ] == logs
+    assert len(logs) == 1
+    assert logs[0] == (
+        'recaptcha failure, path=/captcha-check/ request_host=testserver ip=testclient '
+        'response={"success": false, "hostname": "testserver"}'
+    )

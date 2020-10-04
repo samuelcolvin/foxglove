@@ -26,13 +26,13 @@ async def recaptcha_dummy(request):
     response = data.get('response')
     request['log_msg'] = f'recaptcha {response}'
     if response == '__ok__':
-        return json_response(dict(success=True, hostname='testkey.google.com'))
+        return json_response(dict(success=True, hostname='testserver'))
     elif response == '__wrong_host__':
         return json_response(dict(success=True, hostname='__wrong_host__'))
     elif response == '__400__':
         return json_response({}, status=400)
     else:
-        return json_response(dict(success=False, hostname='testkey.google.com'))
+        return json_response(dict(success=False, hostname='testserver'))
 
 
 @middleware

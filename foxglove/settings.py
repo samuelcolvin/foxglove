@@ -80,8 +80,6 @@ class BaseSettings(PydanticBaseSettings):
     # this is the recaptcha test key, you'll need to change it for production, see
     # https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
     recaptcha_secret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
-    # expected host for recaptcha requests, testkey.google.com will be the hostname using the test token
-    recaptcha_hostname = 'testkey.google.com'
 
     @property
     def sql(self):

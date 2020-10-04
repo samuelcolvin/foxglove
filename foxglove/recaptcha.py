@@ -8,6 +8,7 @@ from .settings import BaseSettings
 from .utils import get_ip
 
 logger = logging.getLogger('foxglove.recaptcha')
+TESTING_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 
 
 async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, error_headers=None) -> None:
@@ -24,14 +25,20 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
     r.raise_for_status()
     data = r.json()
 
-    if data['success'] and data['hostname'] == settings.recaptcha_hostname:
-        logger.info('recaptcha success')
-        return
+    if data['success']:
+        hostname = data['hostname']
+        debug(hostname, request.url.hostname)
+        if hostname == request.url.hostname:
+            logger.info('recaptcha success')
+            return
+        elif settings.dev_mode and settings.recaptcha_secret == TESTING_SECRET and hostname == 'testkey.google.com':
+            logger.info('recaptcha test key success')
+            return
 
     logger.warning(
-        'recaptcha failure, path="%s" expected_host=%s ip=%s response=%s',
+        'recaptcha failure, path=%s request_host=%s ip=%s response=%s',
         request.url.path,
-        settings.recaptcha_hostname,
+        request.url.hostname,
         client_ip,
         r.text,
         extra={'data': {'recaptcha_response': data, 'recaptcha_token': recaptcha_token}},

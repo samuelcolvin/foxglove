@@ -19,7 +19,7 @@ async def test_recaptcha_dummy(dummy_server: DummyServer, glove):
         f'http://localhost:{dummy_server.server.port}/recaptcha_url/', data={'response': '__ok__'}
     )
     assert r.status_code == 200, r.text
-    assert r.json() == {'success': True, 'hostname': 'testkey.google.com'}
+    assert r.json() == {'success': True, 'hostname': 'testserver'}
     assert dummy_server.log == ['POST /recaptcha_url/ > 200 (recaptcha __ok__)']
 
 
@@ -35,7 +35,7 @@ async def test_recaptcha_dummy_400(dummy_server: DummyServer, glove):
 async def test_recaptcha_dummy_other(dummy_server: DummyServer, glove):
     r = await glove.http.post(f'http://localhost:{dummy_server.server.port}/recaptcha_url/')
     assert r.status_code == 200, r.text
-    assert r.json() == {'success': False, 'hostname': 'testkey.google.com'}
+    assert r.json() == {'success': False, 'hostname': 'testserver'}
     assert dummy_server.log == ['POST /recaptcha_url/ > 200 (recaptcha None)']
 
 
