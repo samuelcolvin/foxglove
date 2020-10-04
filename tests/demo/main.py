@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Optional
 
 from buildpg.asyncpg import BuildPgConnection
 from fastapi import Depends, FastAPI, Request
@@ -11,6 +12,7 @@ from foxglove import BaseSettings, exceptions, glove
 from foxglove.db import PgMiddleware
 from foxglove.db.middleware import get_db
 from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
+from foxglove.recaptcha import RecaptchaDepends
 from foxglove.route_class import KeepBodyAPIRoute
 
 logger = logging.getLogger('main')
@@ -90,3 +92,13 @@ async def aworker(settings: BaseSettings):
             v = await conn.fetchval('select 4^4')
         logger.info('running demo worker function, ans: %0.0f', v)
         assert isinstance(settings, BaseSettings)
+
+
+class CheckRecaptchaModal(BaseModel):
+    recaptcha_token: Optional[str]
+
+
+@app.post('/captcha-check/')
+async def captcha_check(m: CheckRecaptchaModal, check_recaptcha: RecaptchaDepends = Depends(RecaptchaDepends)):
+    await check_recaptcha(m.recaptcha_token)
+    return {'status': 'ok'}

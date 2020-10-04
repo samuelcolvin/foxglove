@@ -21,16 +21,18 @@ async def return_any_status(request):
     return Response(text=f'test response with status {status}', status=status)
 
 
-async def grecaptcha_dummy(request):
+async def recaptcha_dummy(request):
     data = await request.post()
     response = data.get('response')
-    request['log_msg'] = f'grecaptcha {response}'
+    request['log_msg'] = f'recaptcha {response}'
     if response == '__ok__':
-        return json_response(dict(success=True, hostname='127.0.0.1'))
+        return json_response(dict(success=True, hostname='testkey.google.com'))
+    elif response == '__wrong_host__':
+        return json_response(dict(success=True, hostname='__wrong_host__'))
     elif response == '__400__':
         return json_response({}, status=400)
     else:
-        return json_response(dict(success=False, hostname='127.0.0.1'))
+        return json_response(dict(success=False, hostname='testkey.google.com'))
 
 
 @middleware
@@ -54,7 +56,7 @@ def create_dummy_app() -> Application:
     app.add_routes(
         [
             web.route('*', r'/status/{status:\d+}/', return_any_status, name='any-status'),
-            web.post('/grecaptcha_url/', grecaptcha_dummy, name='grecaptcha-dummy'),
+            web.post('/recaptcha_url/', recaptcha_dummy, name='recaptcha-dummy'),
         ]
     )
     app['log'] = []
