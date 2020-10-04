@@ -77,10 +77,8 @@ class BaseSettings(PydanticBaseSettings):
     cross_origin_origins: List[Pattern] = []
 
     recaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
-
-    # this is the test key from https://developers.google.com/recaptcha/docs/faq, or
+    # this is the recaptcha test key, you'll need to change it for production, see
     # https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
-    # you'll need to change it for production
     recaptcha_secret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
     # expected host for recaptcha requests, testkey.google.com will be the hostname using the test token
     recaptcha_hostname = 'testkey.google.com'

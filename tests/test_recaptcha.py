@@ -6,7 +6,7 @@ from foxglove.testing import Client
 
 def test_success(client: Client, settings, dummy_server: DummyServer, caplog):
     caplog.set_level(logging.INFO)
-    settings.recaptcha_url = f'http://localhost:{dummy_server.server.port}/recaptcha_url/'
+    settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     assert client.get_json('/') == {'app': 'foxglove-demo'}
     assert client.post_json('/captcha-check/', {'recaptcha_token': '__ok__'}) == {'status': 'ok'}
     assert dummy_server.log == ['POST /recaptcha_url/ > 200 (recaptcha __ok__)']
@@ -15,7 +15,7 @@ def test_success(client: Client, settings, dummy_server: DummyServer, caplog):
 
 
 def test_no_token(client: Client, settings, dummy_server: DummyServer):
-    settings.recaptcha_url = f'http://localhost:{dummy_server.server.port}/recaptcha_url/'
+    settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     assert client.get_json('/') == {'app': 'foxglove-demo'}
     assert client.post_json('/captcha-check/', {}, status=400) == {'message': 'No recaptcha value'}
     assert dummy_server.log == []
@@ -23,7 +23,7 @@ def test_no_token(client: Client, settings, dummy_server: DummyServer):
 
 def test_wrong_host(client: Client, settings, dummy_server: DummyServer, caplog):
     caplog.set_level(logging.INFO)
-    settings.recaptcha_url = f'http://localhost:{dummy_server.server.port}/recaptcha_url/'
+    settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     assert client.get_json('/') == {'app': 'foxglove-demo'}
     assert client.post_json('/captcha-check/', {'recaptcha_token': '__wrong_host__'}, status=400) == {
         'message': 'Invalid recaptcha value'
@@ -40,7 +40,7 @@ def test_wrong_host(client: Client, settings, dummy_server: DummyServer, caplog)
 
 def test_bad_token(client: Client, settings, dummy_server: DummyServer, caplog):
     caplog.set_level(logging.INFO)
-    settings.recaptcha_url = f'http://localhost:{dummy_server.server.port}/recaptcha_url/'
+    settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     assert client.get_json('/') == {'app': 'foxglove-demo'}
     assert client.post_json('/captcha-check/', {'recaptcha_token': 'bad'}, status=400) == {
         'message': 'Invalid recaptcha value'
