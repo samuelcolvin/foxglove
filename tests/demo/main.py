@@ -33,7 +33,13 @@ add_middleware(
     session_cookie=glove.settings.cookie_name,
     same_site='strict',
 )
-add_middleware(CsrfMiddleware)
+
+
+def should_check_csrf(request):
+    return request.url.path != '/no-csrf/'
+
+
+add_middleware(CsrfMiddleware, should_check=should_check_csrf)
 add_middleware(PgMiddleware)
 
 
@@ -102,3 +108,8 @@ class CheckRecaptchaModal(BaseModel):
 async def captcha_check(m: CheckRecaptchaModal, check_recaptcha: RecaptchaDepends = Depends(RecaptchaDepends)):
     await check_recaptcha(m.recaptcha_token)
     return {'status': 'ok'}
+
+
+@app.post('/no-csrf/')
+async def no_csrf():
+    pass

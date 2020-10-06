@@ -231,7 +231,14 @@ class CsrfMiddleware(BaseHTTPMiddleware):
     This prevents CSRF especially if the cookie has same_site strict
     """
 
+    def __init__(self, app: Starlette, should_check: Callable[[Request], bool] = None):
+        super().__init__(app)
+        self.should_check = should_check
+
     async def dispatch(self, request: Request, call_next: CallNext) -> Response:
+        if self.should_check and not self.should_check(request):
+            return await call_next(request)
+
         session_id = request.session.get(session_id_key)
         benign_request = request.method in {'HEAD', 'GET', 'OPTIONS'}
         if not benign_request and session_id is None:
