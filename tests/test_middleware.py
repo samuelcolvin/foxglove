@@ -3,6 +3,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from foxglove.middleware import CloudflareCheckMiddleware, HostRedirectMiddleware
+from foxglove.testing import Client
 
 pytestmark = pytest.mark.asyncio
 
@@ -80,3 +81,8 @@ async def test_cloudflare_multiple(create_request):
     assert repr(m.ip_ranges[0]) == 'IPRangeCounter(162.158.0.0/15, 2)'
     assert repr(m.ip_ranges[1]) == 'IPRangeCounter(104.16.0.0/12, 1)'
     assert repr(m.ip_ranges[2]) == 'IPRangeCounter(173.245.48.0/20, 0)'
+
+
+def test_index(client: Client):
+    assert client.post_json('/no-csrf/') is None
+    assert client.last_request.status_code == 200
