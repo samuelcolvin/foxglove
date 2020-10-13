@@ -17,17 +17,30 @@ class Client(TestClient):
         return r
 
     def get_json(
-        self, url: str, *, allow_redirects: bool = False, status: Optional[int] = 200, **kwargs
+        self,
+        url: str,
+        *,
+        allow_redirects: bool = False,
+        status: Optional[int] = 200,
+        headers: Dict[str, str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
-        r = self.get(url, allow_redirects=allow_redirects, **kwargs)
+        r = self.get(url, allow_redirects=allow_redirects, headers=headers, **kwargs)
         if status:  # pragma: no cover
             assert r.status_code == status, r.text
         return r.json()
 
     def post_json(
-        self, url: str, json: Any = None, *, allow_redirects: bool = False, status: Optional[int] = 200
+        self,
+        url: str,
+        json: Any = None,
+        *,
+        allow_redirects: bool = False,
+        status: Optional[int] = 200,
+        headers: Dict[str, str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
-        r = self.post(url, json=json, allow_redirects=allow_redirects)
+        r = self.post(url, json=json, allow_redirects=allow_redirects, headers=headers, **kwargs)
         if status:
             assert r.status_code == status, r.text
         return r.json()
