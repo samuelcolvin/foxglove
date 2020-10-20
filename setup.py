@@ -49,6 +49,7 @@ setup(
         'arq>=0.18',
         'asyncpg>=0.20.1',
         'starlette>=0.13.2',
+        'itsdangerous>=1.1.0',
         'buildpg>=0.2.3',
         'httpx>=0.11.1',
         'pydantic>=1.6.1',
@@ -57,7 +58,6 @@ setup(
         'uvicorn>=0.11.8',
     ],
     extras_require={
-        'extra': ['ipython>=7.7.0', 'watchgod>=0.6'],
-        'testing': ['aiohttp>=3.6.2', 'aiodns>=2.0.0'],
+        'extra': ['ipython>=7.7.0', 'watchgod>=0.6', 'aiohttp>=3.6.2', 'aiodns>=2.0.0', 'requests>=2.24.0'],
     },
 )

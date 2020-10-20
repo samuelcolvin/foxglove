@@ -4,9 +4,14 @@ black = black -S -l 120 --target-version py38 foxglove tests
 
 .PHONY: install
 install:
-	pip install -U setuptools pip
-	pip install -U -r requirements.txt
+	pip install -U pip wheel
+	pip install -r tests/requirements.txt
 	pip install -U -e .[extra]
+
+.PHONY: install-all
+install-all: install
+	pip install -r tests/requirements-linting.txt
+
 
 .PHONY: format
 format:
