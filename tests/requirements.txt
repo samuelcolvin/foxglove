@@ -5,3 +5,4 @@ pytest-asyncio==0.14.0
 pytest-cov==2.10.1
 pytest-mock==3.3.1
 pytest-sugar==0.9.4
+uvloop==0.14.0
