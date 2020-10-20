@@ -40,9 +40,8 @@ jobs:
 
     - name: install dependencies
       run: |
-        pip install -U pip wheel
-        pip install -r tests/requirements.txt
-        pip install -e .[extra]
+        make install
+        pip freeze
 
     - name: test
       run: |
@@ -56,24 +55,16 @@ jobs:
   lint:
     runs-on: ubuntu-latest
 
-    env:
-      PIP_USE_FEATURE: 2020-resolver
-
     steps:
     - uses: actions/checkout@v2
 
-    - name: set up python
-      uses: actions/setup-python@v1
+    - uses: actions/setup-python@v1
       with:
         python-version: '3.8'
 
-    - name: install dependencies
-      run: |
-        pip install -U pip wheel
-        pip install -r tests/requirements-linting.txt
+    - run: pip install -r tests/requirements-linting.txt
 
-    - name: lint
-      run: make lint
+    - run: make lint
 
   deploy:
     needs:
