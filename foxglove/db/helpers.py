@@ -96,7 +96,7 @@ class _ConnAcquire:
         return DummyPgConn(self._conn, self._lock)
 
     def __await__(self):
-        return self._get_conn()
+        return self._get_conn().__await__()
 
 
 class DummyPgPool(_LockedExecute):
