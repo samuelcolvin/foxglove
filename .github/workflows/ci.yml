@@ -84,7 +84,7 @@ jobs:
       - name: install
         run: |
           make install
-          pip install -U wheel twine
+          pip install -U twine
 
       - name: build
         run: python setup.py sdist bdist_wheel
