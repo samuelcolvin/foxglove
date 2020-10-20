@@ -49,6 +49,7 @@ setup(
         'arq>=0.18',
         'asyncpg>=0.20.1',
         'starlette>=0.13.2',
+        'itsdangerous>=1.1.0',
         'buildpg>=0.2.3',
         'httpx>=0.11.1',
         'pydantic>=1.6.1',
