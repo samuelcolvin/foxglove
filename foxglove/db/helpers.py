@@ -92,6 +92,12 @@ class _ConnAcquire:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
+    async def _get_conn(self) -> DummyPgConn:
+        return DummyPgConn(self._conn, self._lock)
+
+    def __await__(self):
+        return self._get_conn()
+
 
 class DummyPgPool(_LockedExecute):
     """
@@ -103,6 +109,9 @@ class DummyPgPool(_LockedExecute):
         return _ConnAcquire(self._conn, self._lock)
 
     async def close(self):
+        pass
+
+    async def release(self, conn):
         pass
 
     def as_dummy_conn(self) -> DummyPgConn:

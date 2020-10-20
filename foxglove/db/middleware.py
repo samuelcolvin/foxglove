@@ -1,13 +1,14 @@
 from typing import TYPE_CHECKING
 
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 __all__ = 'PgMiddleware', 'get_db'
 
 if TYPE_CHECKING:
     from buildpg.asyncpg import BuildPgConnection
-    from starlette.requests import Request
     from starlette.responses import Response
+
     from ..middleware import CallNext
 
 
@@ -18,13 +19,10 @@ class GetPgConn:
         self._glove = glove
         self._conn = None
 
-    async def _get_conn(self) -> 'BuildPgConnection':
+    async def __call__(self):
         if self._conn is None:
             self._conn = await self._glove.pg.acquire()
         return self._conn
-
-    def __await__(self):
-        return self._get_conn().__await__()
 
     async def release(self):
         if self._conn is not None:
@@ -41,7 +39,7 @@ class PgMiddleware(BaseHTTPMiddleware):
 
         self.glove = glove
 
-    async def dispatch(self, request: 'Request', call_next: 'CallNext') -> 'Response':
+    async def dispatch(self, request: Request, call_next: 'CallNext') -> 'Response':
         request.state.get_pg_conn = GetPgConn(self.glove)
         try:
             return await call_next(request)
@@ -49,5 +47,5 @@ class PgMiddleware(BaseHTTPMiddleware):
             await request.state.get_pg_conn.release()
 
 
-async def get_db(request: 'Request') -> 'BuildPgConnection':
+async def get_db(request: Request) -> 'BuildPgConnection':
     return await request.state.get_pg_conn()
