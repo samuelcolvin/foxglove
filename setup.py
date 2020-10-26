@@ -25,6 +25,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
         'Intended Audience :: System Administrators',
@@ -46,7 +47,7 @@ setup(
     python_requires='>=3.8',
     zip_safe=True,
     install_requires=[
-        'arq>=0.18',
+        'arq>=0.19.1',
         'asyncpg>=0.20.1',
         'starlette>=0.13.2',
         'itsdangerous>=1.1.0',

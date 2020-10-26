@@ -1,5 +1,7 @@
 /.idea/
 /env/
+/env38/
+/env39/
 /env-minimal/
 *.py[cod]
 *.egg-info/
