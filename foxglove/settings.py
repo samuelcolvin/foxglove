@@ -111,10 +111,7 @@ class BaseSettings(PydanticBaseSettings):
 
         if RedisSettings.__module__ != 'arq.connections':
             raise RuntimeError(f'arq must be installed to use redis, redis_settings set to {v!r}')
-        conf = urlparse(v)
-        return RedisSettings(
-            host=conf.hostname, port=conf.port, password=conf.password, database=int((conf.path or '0').strip('/'))
-        )
+        return RedisSettings.from_dsn(v)
 
     @validator('pg_db_exists', always=True)
     def pg_db_exists_heroku(cls, v: bool) -> bool:

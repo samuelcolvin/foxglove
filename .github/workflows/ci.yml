@@ -10,7 +10,12 @@ on:
 
 jobs:
   test:
+    name: test py${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.6', '3.7', '3.8', '3.9' ]
 
     services:
       postgres:
@@ -36,7 +41,7 @@ jobs:
     - name: set up python
       uses: actions/setup-python@v1
       with:
-        python-version: '3.8'
+        python-version: ${{ matrix.python-version }}
 
     - name: install dependencies
       run: |
