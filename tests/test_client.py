@@ -1,5 +1,3 @@
-import pytest
-
 from foxglove.testing import Client
 
 
@@ -11,11 +9,14 @@ def test_index(client: Client):
 
 def test_post_index(client: Client):
     client.get_json('/')
-    with pytest.raises(AssertionError):
-        assert client.post_json('/')
-    assert client.last_request.status_code == 405
     assert client.post_json('/', status=None)
     assert client.last_request.status_code == 405
+
+
+def test_request_error(client: Client, mocker):
+    fail_mock = mocker.patch('foxglove.testing.pytest.fail')
+    client.post_json('/')
+    fail_mock.called_once()
 
 
 def test_create_user(client: Client):
