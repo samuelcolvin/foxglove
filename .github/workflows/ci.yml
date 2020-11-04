@@ -87,17 +87,14 @@ jobs:
           python-version: '3.8'
 
       - name: install
-        run: |
-          make install
-          pip install -U twine
+        run: pip install -U pip setuptools twine wheel
 
-      - name: build
-        run: python setup.py sdist bdist_wheel
+      - name: set version
+        run: VERSION_PATH='foxglove/version.py' python <(curl -Ls https://git.io/JT3rm)
+
+      - run: python setup.py sdist bdist_wheel
 
       - run: twine check dist/*
-
-      - name: check tag
-        run: PACKAGE=foxglove python <(curl -Ls https://git.io/JvQsH)
 
       - name: upload to pypi
         run: twine upload dist/*
