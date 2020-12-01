@@ -28,6 +28,8 @@ __all__ = (
     'HostRedirectMiddleware',
     'CloudflareCheckMiddleware',
     'request_log_extra',
+    'get_session_id',
+    'update_session_id',
 )
 
 
@@ -224,6 +226,15 @@ no_cookie_response = """\
 """
 
 
+def get_session_id(request: Request) -> str:
+    return request.session[session_id_key]
+
+
+def update_session_id(request: Request) -> str:
+    request.session[session_id_key] = new_session_id = secrets.token_urlsafe()
+    return new_session_id
+
+
 class CsrfMiddleware(BaseHTTPMiddleware):
     """
     Ensures a GET request has been made before post requests and that session_id is set in the session.
@@ -248,7 +259,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 
         # set the session id for any valid GET request
         if benign_request and response.status_code == 200 and session_id is None:
-            request.session[session_id_key] = secrets.token_urlsafe()
+            update_session_id(request)
         return response
 
 
