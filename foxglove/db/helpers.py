@@ -54,6 +54,14 @@ class _LockedExecute:
         async with self._lock:
             return await self._conn.fetchrow_b(*args, **kwargs)
 
+    async def executemany(self, *args, **kwargs):
+        async with self._lock:
+            return await self._conn.executemany(*args, **kwargs)
+
+    async def executemany_b(self, *args, **kwargs):
+        async with self._lock:
+            return await self._conn.executemany_b(*args, **kwargs)
+
 
 class DummyPgTransaction(_LockedExecute):
     _tr = None
@@ -158,3 +166,9 @@ class SyncDb:
     def fetchrow_b(self, *args, **kwargs):
         v = self._loop.run_until_complete(self._conn.fetchrow_b(*args, **kwargs))
         return None if v is None else dict(v)
+
+    def executemany(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.executemany(*args, **kwargs))
+
+    def executemany_b(self, *args, **kwargs):
+        return self._loop.run_until_complete(self._conn.executemany_b(*args, **kwargs))
