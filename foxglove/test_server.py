@@ -31,6 +31,8 @@ async def recaptcha_dummy(request):
         return json_response(dict(success=True, hostname='__wrong_host__'))
     elif response == '__400__':
         return json_response({}, status=400)
+    elif response and response.startswith('__ok__ host:'):
+        return json_response(dict(success=True, hostname=response.split(':', 1)[-1]))
     else:
         return json_response(dict(success=False, hostname='testserver'))
 

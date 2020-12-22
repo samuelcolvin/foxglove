@@ -42,6 +42,7 @@ class BaseSettings(PydanticBaseSettings):
     environment: str = 'dev'
     sentry_dsn: Optional[str] = None
     log_level: str = 'INFO'
+    origin: str = None
 
     asgi_path: str = 'foxglove.asgi:app'
     # TODO src here should be replaced with '.main:app' then prefixed with the name of the directory settings is in

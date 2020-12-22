@@ -51,3 +51,14 @@ def test_bad_token(client: Client, settings, dummy_server: DummyServer, caplog):
         'recaptcha failure, path=/captcha-check/ request_host=testserver ip=testclient '
         'response={"success": false, "hostname": "testserver"}'
     )
+
+
+def test_settings_origin(client: Client, settings, dummy_server: DummyServer, caplog):
+    caplog.set_level(logging.INFO)
+    settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
+    settings.origin = 'https://example.com'
+    assert client.get_json('/') == {'app': 'foxglove-demo'}
+    assert client.post_json('/captcha-check/', {'recaptcha_token': '__ok__ host:example.com'}) == {'status': 'ok'}
+    assert dummy_server.log == ['POST /recaptcha_url/ > 200 (recaptcha __ok__ host:example.com)']
+    logs = [r.message for r in caplog.records if r.name == 'foxglove.recaptcha']
+    assert logs == ['recaptcha success']

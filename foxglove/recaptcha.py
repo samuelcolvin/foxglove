@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Optional
 
+from starlette.datastructures import URL
 from starlette.requests import Request
 
 from . import exceptions, glove
@@ -26,10 +27,15 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
     r.raise_for_status()
     data = r.json()
 
-    request_host = request.url.hostname
-    # using the origin here if available instead of host avoids problems when requests are proxied e.g. with netlify
-    if origin := request.headers.get('origin'):
-        request_host = re.sub('^https?://', '', origin)
+    # if settings.origin exists, use that instead of the request to avoid problems with old browsers that don't include
+    # the Origin header
+    if origin := getattr(settings, 'origin', None):
+        request_host = URL(origin).hostname
+    else:
+        request_host = request.url.hostname
+        # using the origin here if available instead of host avoids problems when requests are proxied e.g. with netlify
+        if origin := request.headers.get('origin'):
+            request_host = re.sub('^https?://', '', origin)
 
     if data['success']:
         hostname = data['hostname']
