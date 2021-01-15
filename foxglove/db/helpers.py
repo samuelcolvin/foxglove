@@ -17,10 +17,11 @@ class TimedLock(asyncio.Lock):
 
 
 class _LockedExecute:
-    def __init__(self, conn: BuildPgConnection, lock: Optional[TimedLock] = None):
+    def __init__(self, conn: BuildPgConnection, lock: Optional[TimedLock] = None, tr_lock: Optional[TimedLock] = None):
         self._conn: BuildPgConnection = conn
         # could also add lock to each method of the returned connection
         self._lock: TimedLock = lock or TimedLock()
+        self._tr_lock: TimedLock = tr_lock or TimedLock(timeout=2)
 
     async def execute(self, *args, **kwargs):
         async with self._lock:
@@ -67,41 +68,51 @@ class DummyPgTransaction(_LockedExecute):
     _tr = None
 
     async def __aenter__(self):
-        async with self._lock:
-            self._tr = self._conn.transaction()
-            await self._tr.start()
-        return self
+        await self._tr_lock.acquire()
+        try:
+            async with self._lock:
+                self.__tr = self._conn.transaction()
+                await self.__tr.start()
+        except Exception:
+            self._tr_lock.release()
+            raise
+        else:
+            return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        async with self._lock:
-            if exc_type:
-                await self._tr.rollback()
-            else:
-                await self._tr.commit()
-            self._tr = None
+        try:
+            async with self._lock:
+                if exc_type:
+                    await self.__tr.rollback()
+                else:
+                    await self.__tr.commit()
+                self.__tr = None
+        finally:
+            self._tr_lock.release()
 
 
 class DummyPgConn(_LockedExecute):
     def transaction(self):
-        return DummyPgTransaction(self._conn, self._lock)
+        return DummyPgTransaction(self._conn, self._lock, self._tr_lock)
 
     def __repr__(self) -> str:
         return f'<DummyPgConn {self._conn._addr} {self._conn._params}>'
 
 
 class _ConnAcquire:
-    def __init__(self, conn: BuildPgConnection, lock: TimedLock):
+    def __init__(self, conn: BuildPgConnection, lock: TimedLock, tr_lock: TimedLock):
         self._conn = conn
         self._lock = lock
+        self._tr_lock = tr_lock
 
     async def __aenter__(self) -> DummyPgConn:
-        return DummyPgConn(self._conn, self._lock)
+        return DummyPgConn(self._conn, self._lock, self._tr_lock)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
     async def _get_conn(self) -> DummyPgConn:
-        return DummyPgConn(self._conn, self._lock)
+        return DummyPgConn(self._conn, self._lock, self._tr_lock)
 
     def __await__(self):
         return self._get_conn().__await__()
@@ -114,7 +125,7 @@ class DummyPgPool(_LockedExecute):
     """
 
     def acquire(self):
-        return _ConnAcquire(self._conn, self._lock)
+        return _ConnAcquire(self._conn, self._lock, self._tr_lock)
 
     async def close(self):
         pass
@@ -128,7 +139,7 @@ class DummyPgPool(_LockedExecute):
 
         **THIS IS OBVIOUSLY ONLY TO BE USED IN TESTS**
         """
-        return DummyPgConn(self._conn, self._lock)
+        return DummyPgConn(self._conn, self._lock, self._tr_lock)
 
     def __repr__(self) -> str:
         return f'<DummyPgPool {self._conn._addr} {self._conn._params}>'
