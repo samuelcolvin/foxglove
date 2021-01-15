@@ -6,7 +6,8 @@ from buildpg.asyncpg import BuildPgConnection
 
 
 class TimedLock(asyncio.Lock):
-    def __init__(self, *, timeout=0.5):
+    def __init__(self, name: str, *, timeout=0.5):
+        self.name = name
         self.timeout = timeout
         super().__init__()
 
@@ -14,7 +15,7 @@ class TimedLock(asyncio.Lock):
         try:
             await asyncio.wait_for(super().acquire(), timeout=self.timeout)
         except asyncio.TimeoutError as e:
-            raise asyncio.TimeoutError('DummyPg query lock timed out') from e
+            raise asyncio.TimeoutError(f'{self.name} timed out') from e
 
 
 class _LockedExecute:
@@ -23,8 +24,8 @@ class _LockedExecute:
     ):
         self._conn: BuildPgConnection = conn
         # could also add lock to each method of the returned connection
-        self._lock: TimedLock = lock or TimedLock()
-        self._transaction_lock: TimedLock = transaction_lock or TimedLock(timeout=2)
+        self._lock: TimedLock = lock or TimedLock('DummyPgConn query lock')
+        self._transaction_lock: TimedLock = transaction_lock or TimedLock('DummyPgConn transaction lock', timeout=2)
 
     def __getattr__(self, item):
         f = getattr(self._conn, item)
