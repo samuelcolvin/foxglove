@@ -48,10 +48,10 @@ setup(
     zip_safe=True,
     install_requires=[
         'arq>=0.19.1',
-        'asyncpg>=0.20.1',
-        'starlette>=0.14.2',
+        'asyncpg>=0.23.0',
+        'fastapi>=0.66.1',
         'itsdangerous>=1.1.0',
-        'buildpg>=0.3',
+        'buildpg>=0.3.0',
         'httpx>=0.11.1',
         'pydantic>=1.6.1',
         'sentry-sdk>=0.14',
@@ -59,6 +59,13 @@ setup(
         'uvicorn>=0.11.8',
     ],
     extras_require={
-        'extra': ['ipython>=7.7.0', 'watchgod>=0.6', 'aiohttp>=3.6.2', 'aiodns>=2.0.0', 'requests>=2.24.0'],
+        'extra': [
+            'ipython>=7.7.0',
+            'watchgod>=0.6',
+            'aiohttp>=3.6.2',
+            'aiodns>=2.0.0',
+            'requests>=2.24.0',
+            'bcrypt>=3.2.0',
+        ],
     },
 )
