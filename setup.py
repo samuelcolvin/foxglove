@@ -49,7 +49,7 @@ setup(
     install_requires=[
         'arq>=0.19.1',
         'asyncpg>=0.20.1',
-        'starlette>=0.13.2',
+        'starlette>=0.14.2',
         'itsdangerous>=1.1.0',
         'buildpg>=0.2.3',
         'httpx>=0.11.1',
