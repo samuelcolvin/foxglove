@@ -1,10 +1,9 @@
 import logging
 
 import pytest
-import os
 
 from foxglove.db import prepare_database
-from foxglove.redis import flush_redis, async_flush_redis
+from foxglove.redis import async_flush_redis, flush_redis
 from foxglove.settings import BaseSettings
 from tests.conftest import ConnContext
 
