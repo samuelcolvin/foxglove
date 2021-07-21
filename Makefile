@@ -12,7 +12,6 @@ install:
 install-all: install
 	pip install -r tests/requirements-linting.txt
 
-
 .PHONY: format
 format:
 	$(isort)

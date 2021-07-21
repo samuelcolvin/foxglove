@@ -1,8 +1,8 @@
-coverage==5.3
-fastapi==0.61.1
-pytest==6.1.1
-pytest-asyncio==0.14.0
-pytest-cov==2.10.1
-pytest-mock==3.3.1
+coverage==5.5
+fastapi==0.66.1
+pytest==6.2.4
+pytest-asyncio==0.15.1
+pytest-cov==2.12.1
+pytest-mock==3.6.1
 pytest-sugar==0.9.4
-uvloop==0.14.0
+uvloop==0.15.3

@@ -111,7 +111,7 @@ class Offline:
 
     def __bool__(self):
         if self.is_offline is None:
-            loop = self._loop or asyncio.new_event_loop()
+            loop = self._loop or asyncio.get_event_loop()
             self.is_offline = loop.run_until_complete(self._check())
         return self.is_offline
 
