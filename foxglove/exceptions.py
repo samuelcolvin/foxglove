@@ -1,5 +1,7 @@
-from typing import Any, Dict, Optional
+import json
+from typing import Any, Dict, Iterable, Optional, Type, TypeVar, Union
 
+from httpx import Response as HttpxResponse
 from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse
 
@@ -22,7 +24,11 @@ __all__ = (
     'HttpNotFound',
     'HttpMethodNotAllowed',
     'HttpConflict',
+    'HttpUnprocessableEntity',
+    'HttpTooManyRequests',
     'Http470',
+    'manual_response_error',
+    'UnexpectedResponse',
 )
 
 
@@ -115,6 +121,50 @@ class HttpUnprocessableEntity(HttpMessageError):
     status = 422
 
 
+class HttpTooManyRequests(HttpMessageError):
+    status = 429
+
+
 class Http470(HttpMessageError):
     status = 470
     custom_reason = 'Invalid user input'
+
+
+ExcType = TypeVar('ExcType', bound=HttpMessageError)
+FieldType = Union[str, Iterable[str]]
+
+
+def manual_response_error(
+    field: 'FieldType', msg: str, exc: Type[ExcType] = HttpUnprocessableEntity, *, error_location: str = 'body'
+) -> ExcType:
+    """
+    Build error details that reflect how fastapi/pydantic structures errors so the frontend
+    (and reactstrap_toolbox/requests.js in particular) can show user errors easily.
+    """
+    loc = [error_location]
+    if isinstance(field, str):
+        loc.append(field)
+    else:
+        loc += list(field)
+    return exc('validation error', details=[{'loc': loc, 'msg': msg}])
+
+
+class UnexpectedResponse(ValueError):
+    def __init__(self, r: HttpxResponse):
+        self.status_code = r.status_code
+        self.response = r
+        super().__init__(f'{r.request.method} {r.request.url}, unexpected response: {r.status_code}')
+
+    @classmethod
+    def check(cls, r: HttpxResponse, *, allowed_responses: Iterable[int] = (200, 201)) -> None:
+        if r.status_code not in allowed_responses:
+            raise cls(r)
+
+    def __repr__(self):
+        try:
+            self.body = self.response.json()
+        except ValueError:
+            self.body = b = self.response.text
+        else:
+            b = json.dumps(self.body, indent=2)
+        return f'UnexpectedResponse("{self.args[0]}:\n{b}")'

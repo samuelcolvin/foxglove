@@ -9,6 +9,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from foxglove import BaseSettings, exceptions, glove
+from foxglove.auth import rate_limit
 from foxglove.db import PgMiddleware
 from foxglove.db.middleware import get_db
 from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
@@ -113,3 +114,13 @@ async def captcha_check(m: CheckRecaptchaModal, check_recaptcha: RecaptchaDepend
 @app.post('/no-csrf/')
 async def no_csrf():
     pass
+
+
+@app.get('/rate-limit-error/', dependencies=[Depends(rate_limit(request_limit=2, interval=1000))])
+async def rate_limit_raise():
+    return 'ok'
+
+
+@app.get('/rate-limit-return/')
+async def rate_limit_return(request_count: int = Depends(rate_limit(request_limit=None, interval=1000))):
+    return {'request_count': request_count}

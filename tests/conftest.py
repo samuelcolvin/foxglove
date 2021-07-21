@@ -18,7 +18,7 @@ commit_transactions = 'KEEP_DB' in os.environ
 
 @pytest.fixture(scope='session', name='settings')
 def fix_settings():
-    settings = Settings(dev_mode=False, test_mode=True)
+    settings = Settings(dev_mode=False, test_mode=True, bcrypt_rounds=4)
     assert not settings.dev_mode
     glove._settings = settings
 
@@ -76,7 +76,7 @@ async def fix_db_conn(settings, clean_db):
 
 
 @pytest.fixture(name='glove')
-async def fix_glove(db_conn):
+async def fix_glove(db_conn, loop):
     glove.pg = db_conn
 
     await glove.startup()
@@ -88,8 +88,8 @@ async def fix_glove(db_conn):
 
 
 @pytest.fixture(name='sync_db')
-def fix_sync_db(db_conn):
-    return SyncDb(db_conn, asyncio.get_event_loop())
+def fix_sync_db(db_conn, loop):
+    return SyncDb(db_conn, loop)
 
 
 class ConnContext:

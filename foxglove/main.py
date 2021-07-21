@@ -35,7 +35,7 @@ class Glove:
         coros = []
         if pg := getattr(self, 'pg', None):
             coros.append(pg.close())
-        if http := getattr(self, 'http', None):
+        if http := getattr(self, '_http', None):
             coros.append(http.aclose())
         if redis := getattr(self, 'redis', None):
             redis.close()

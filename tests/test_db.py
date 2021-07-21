@@ -1,6 +1,9 @@
+import logging
+
 import pytest
 
 from foxglove.db import prepare_database
+from foxglove.redis import async_flush_redis, flush_redis
 from foxglove.settings import BaseSettings
 from tests.conftest import ConnContext
 
@@ -48,3 +51,28 @@ async def test_prepare_database_keep(db_conn_global, alt_settings: BaseSettings)
 
     async with ConnContext(alt_settings.pg_dsn) as conn:
         assert await conn.fetchval('select count(*) from organisations') == 1
+
+
+def test_flush_redis_yes(settings, caplog, mocker):
+    caplog.set_level(logging.INFO)
+    mocker.patch('foxglove.redis.input', return_value='y')
+    flush_redis(settings)
+    assert caplog.record_tuples == [
+        ('foxglove.redis', logging.INFO, 'resetting database...'),
+        ('foxglove.redis', logging.INFO, 'done.'),
+    ]
+
+
+def test_flush_redis_no(settings, caplog, mocker):
+    caplog.set_level(logging.INFO)
+    mocker.patch('foxglove.redis.input', return_value='n')
+    flush_redis(settings)
+    assert caplog.record_tuples == [('foxglove.redis', logging.INFO, 'cancelling')]
+
+
+async def test_async_flush_redis(settings, glove):
+    await glove.redis.set('foo', '1')
+    await glove.redis.set('bar', '2')
+    assert len(await glove.redis.keys('*')) == 2
+    await async_flush_redis(settings)
+    assert len(await glove.redis.keys('*')) == 0
