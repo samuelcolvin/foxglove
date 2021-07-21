@@ -1,4 +1,5 @@
 import pytest
+
 from foxglove.utils import dict_not_none, list_not_none
 
 

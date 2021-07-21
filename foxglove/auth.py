@@ -3,7 +3,7 @@ import hashlib
 import secrets
 from functools import lru_cache
 from time import time
-from typing import Literal, Optional
+from typing import Optional
 
 import bcrypt
 from fastapi import Request
@@ -12,25 +12,22 @@ from pydantic import SecretBytes
 from . import glove
 from .exceptions import HttpTooManyRequests, UnexpectedResponse, manual_response_error
 
-
 __all__ = 'rate_limit', 'check_password_breached', 'check_password_correct', 'hash_password'
 
 
-def rate_limit(*, request_limit: int, interval: int, on_exceeded: Literal['raise', 'return'] = 'raise'):
-    async def check_rate_limit(request: Request) -> bool:
-        cache_key = f'rate-limit:{request.url.path}:{time() // interval:0.0f}'
+def rate_limit(*, request_limit: Optional[int], interval: int):
+    async def check_rate_limit(request: Request) -> int:
+        cache_key = f'rate-limit:{request.method}{request.url.path}:{time() // interval:0.0f}'
         with await glove.redis as conn:
             pipe = conn.pipeline()
             pipe.unwatch()
             pipe.incr(cache_key)
             pipe.expire(cache_key, interval)
-            _, _, request_count, _ = await pipe.execute()
-            if request_count > request_limit:
-                if on_exceeded == 'return':
-                    return True
-                else:
-                    raise HttpTooManyRequests(f'rate limit of {request_limit} requests per {interval} seconds exceeded')
-        return False
+            _, request_count, _ = await pipe.execute()
+            if request_limit is None:
+                return request_count or 0
+            elif request_count > request_limit:
+                raise HttpTooManyRequests(f'rate limit of {request_limit} requests per {interval} seconds exceeded')
 
     return check_rate_limit
 

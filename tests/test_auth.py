@@ -1,11 +1,10 @@
-import asyncio
-
 import pytest
-
 from pydantic import SecretBytes
+from pytest_toolbox.comparison import RegexStr
 
-from foxglove.auth import hash_password, check_password_correct, bcrypt as auth_bcrypt, check_password_breached
+from foxglove.auth import bcrypt as auth_bcrypt, check_password_breached, check_password_correct, hash_password
 from foxglove.exceptions import HttpUnprocessableEntity
+from foxglove.testing import Client
 
 pytestmark = pytest.mark.asyncio
 
@@ -48,3 +47,37 @@ async def test_check_password_breached(glove, password, threshold, okay):
         with pytest.raises(HttpUnprocessableEntity, match='This password is known to hackers'):
             await check_password_breached(SecretBytes(password.encode()), threshold)
 
+
+def get_redis_keys(glove, loop):
+    async def _run():
+        keys = await glove.redis.keys('rate-limit*')
+        if not keys:
+            return None
+        else:
+            assert len(keys) == 1
+            return keys[0], await glove.redis.get(keys[0])
+
+    return loop.run_until_complete(_run())
+
+
+def test_rate_limit_error(client: Client, glove, loop):
+    assert get_redis_keys(glove, loop) is None
+    assert client.get_json('/rate-limit-error/') == 'ok'
+    assert get_redis_keys(glove, loop) == (RegexStr(r'rate-limit:GET/rate-limit-error/:\d+'), '1')
+    assert client.get_json('/rate-limit-error/?foo=bar') == 'ok'
+    assert get_redis_keys(glove, loop) == (RegexStr(r'rate-limit:GET/rate-limit-error/:\d+'), '2')
+    assert client.get_json('/rate-limit-error/?spam=different', status=429) == {
+        'message': 'rate limit of 2 requests per 1000 seconds exceeded'
+    }
+    assert get_redis_keys(glove, loop) == (RegexStr(r'rate-limit:GET/rate-limit-error/:\d+'), '3')
+    assert client.get_json('/rate-limit-error/', status=429) == {
+        'message': 'rate limit of 2 requests per 1000 seconds exceeded'
+    }
+    assert get_redis_keys(glove, loop) == (RegexStr(r'rate-limit:GET/rate-limit-error/:\d+'), '4')
+
+
+def test_rate_limit_return(client: Client, glove, loop):
+    assert get_redis_keys(glove, loop) is None
+    assert client.get_json('/rate-limit-return/') == {'request_count': 1}
+    assert client.get_json('/rate-limit-return/') == {'request_count': 2}
+    assert get_redis_keys(glove, loop) == (RegexStr(r'rate-limit:GET/rate-limit-return/:\d+'), '2')
