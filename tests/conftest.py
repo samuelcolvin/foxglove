@@ -42,13 +42,9 @@ async def _fix_db_conn_global(settings):
 
 
 @pytest.fixture(name='loop')
-def fix_loop(settings):
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop
+def fix_loop(event_loop):
+    asyncio.set_event_loop(event_loop)
+    return event_loop
 
 
 @pytest.fixture(scope='session', name='clean_db')
@@ -80,7 +76,7 @@ async def fix_db_conn(settings, clean_db):
 
 
 @pytest.fixture(name='glove')
-async def fix_glove(db_conn):
+async def fix_glove(db_conn, loop):
     glove.pg = db_conn
 
     await glove.startup()
