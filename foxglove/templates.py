@@ -27,14 +27,14 @@ class FoxgloveTemplates(_Jinja2Templates):
         super().__init__(glove.settings.template_dir if directory is None else directory)
 
     def get_env(self, directory: str) -> 'jinja2.Environment':
-        @jinja2.contextfunction
+        @jinja2.pass_context
         def prompt_reload(context: dict) -> str:
             if context['dev_mode']:
                 return jinja2.Markup(reload_snippet)
             else:
                 return ''
 
-        @jinja2.contextfunction
+        @jinja2.pass_context
         def static_url(context: dict, path: str) -> str:
             request = context['request']
             try:

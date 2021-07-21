@@ -14,6 +14,7 @@ from foxglove.db.middleware import get_db
 from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
 from foxglove.recaptcha import RecaptchaDepends
 from foxglove.route_class import KeepBodyAPIRoute
+from .templates import templates
 
 logger = logging.getLogger('main')
 
@@ -113,3 +114,9 @@ async def captcha_check(m: CheckRecaptchaModal, check_recaptcha: RecaptchaDepend
 @app.post('/no-csrf/')
 async def no_csrf():
     pass
+
+
+@app.get('/render-template/')
+@templates.render('foobar.jinja')
+def render_template(name: str = 'World'):
+    return {'name': name}

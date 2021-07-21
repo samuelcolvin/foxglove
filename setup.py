@@ -59,6 +59,6 @@ setup(
         'uvicorn>=0.11.8',
     ],
     extras_require={
-        'extra': ['ipython>=7.7.0', 'watchgod>=0.6', 'aiohttp>=3.6.2', 'aiodns>=2.0.0', 'requests>=2.24.0'],
+        'extra': ['ipython>=7.7.0', 'watchgod>=0.6', 'aiohttp>=3.7.4', 'aiodns>=2.0.0', 'requests>=2.24.0'],
     },
 )
