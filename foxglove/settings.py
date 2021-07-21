@@ -54,7 +54,6 @@ class BaseSettings(PydanticBaseSettings):
     patch_paths: List[str] = ['src.patches']
 
     sql_path: Path = 'models.sql'
-    template_dir: Optional[Path] = 'templates'
     pg_dsn: Optional[str] = pg_dsn_default
     # eg. the db already exists on heroku and never has to be created
     pg_db_exists = False
