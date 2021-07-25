@@ -56,7 +56,7 @@ setup(
         'pydantic>=1.6.1',
         'sentry-sdk>=0.14',
         'typer>=0.3.2',
-        'uvicorn>=0.11.8',
+        'uvicorn>=0.13.3',
     ],
     extras_require={
         'extra': [

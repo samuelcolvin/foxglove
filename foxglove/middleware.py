@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -5,7 +6,7 @@ import secrets
 from ipaddress import ip_address, ip_network
 from operator import attrgetter
 from time import time
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Literal, Optional
 
 from sentry_sdk import capture_event
 from sentry_sdk.utils import event_from_exception, exc_info_from_error
@@ -16,6 +17,7 @@ from starlette.responses import RedirectResponse, Response
 from starlette.routing import get_name as get_endpoint_name
 
 from . import glove
+from .exceptions import UnexpectedResponse
 from .utils import get_ip
 
 logger = logging.getLogger('foxglove.middleware')
@@ -294,48 +296,60 @@ class CloudflareCheckMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.response_body = response_text.encode() if response_text else self.default_response_body
         # got from https://www.cloudflare.com/ips/
-        self.ip_ranges = [
-            IPRangeCounter('173.245.48.0/20'),
-            IPRangeCounter('103.21.244.0/22'),
-            IPRangeCounter('103.22.200.0/22'),
-            IPRangeCounter('103.31.4.0/22'),
-            IPRangeCounter('141.101.64.0/18'),
-            IPRangeCounter('108.162.192.0/18'),
-            IPRangeCounter('190.93.240.0/20'),
-            IPRangeCounter('188.114.96.0/20'),
-            IPRangeCounter('197.234.240.0/22'),
-            IPRangeCounter('198.41.128.0/17'),
-            IPRangeCounter('162.158.0.0/15'),
-            IPRangeCounter('104.16.0.0/12'),
-            IPRangeCounter('172.64.0.0/13'),
-            IPRangeCounter('131.0.72.0/22'),
-            IPRangeCounter('2400:cb00::/32'),
-            IPRangeCounter('2606:4700::/32'),
-            IPRangeCounter('2803:f800::/32'),
-            IPRangeCounter('2405:b500::/32'),
-            IPRangeCounter('2405:8100::/32'),
-            IPRangeCounter('2a06:98c0::/29'),
-            IPRangeCounter('2c0f:f248::/32'),
-        ]
+        self.ip_ranges: Optional[List[IPRangeCounter]] = None
 
     async def dispatch(self, request: Request, call_next: CallNext) -> Response:
-        client = request.scope.get('client')
-        if client and self.find_network(client[0]):
+        """
+        On Heroku (and any properly configured system) we can trust the last entry in X-Forwarded-For,
+        hence using that before trying client
+
+        https://stackoverflow.com/a/37061471/949890
+        """
+        ip = None
+        x_forwarded_for = request.headers.get('x-forwarded-for')
+        if x_forwarded_for:
+            ip = x_forwarded_for.rsplit(',', 1)[1].strip()
+        else:
+            client = request.scope.get('client')
+            if client:
+                ip = client[0]
+
+        if ip and await self.is_cloudflare_ip(ip):
             return await call_next(request)
 
         extra = {'extra': await request_log_extra(request)}
-        logger.warning('Request not routed through cloudflare client=%s url="%s"', client, request.url, extra=extra)
+        logger.warning('Request not routed through cloudflare ip=%s url="%s"', ip, request.url, extra=extra)
         return Response(self.response_body, status_code=400)
 
-    def find_network(self, ip: str) -> bool:
+    async def is_cloudflare_ip(self, ip: str) -> bool:
         try:
             ip = ip_address(ip.strip())
         except ValueError:
             pass
         else:
-            for r in self.ip_ranges:
+            if self.ip_ranges is None:
+                self.ip_ranges = ip_ranges = await get_cloudflare_ips()
+            else:
+                ip_ranges = self.ip_ranges
+
+            for r in ip_ranges:
                 if ip in r.range:
                     r.counter += 1
                     self.ip_ranges.sort(key=attrgetter('counter'), reverse=True)
                     return True
         return False
+
+
+async def get_cloudflare_ips() -> List[IPRangeCounter]:
+    """
+    Get a list of cloudflare IPs from https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6,
+    see https://www.cloudflare.com/en-gb/ips/ for details
+    """
+
+    async def get_ips(v: Literal[4, 6]) -> List[IPRangeCounter]:
+        r = await glove.http.get(f'https://www.cloudflare.com/ips-v{v}')
+        UnexpectedResponse.check(r)
+        return [IPRangeCounter(ip) for ip in r.text.strip().split('\n')]
+
+    v4_ips, v6_ips = await asyncio.gather(get_ips(4), get_ips(6))
+    return v4_ips + v6_ips
