@@ -295,7 +295,6 @@ class CloudflareCheckMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Starlette, response_text: str = None):
         super().__init__(app)
         self.response_body = response_text.encode() if response_text else self.default_response_body
-        # got from https://www.cloudflare.com/ips/
         self.ip_ranges: Optional[List[IPRangeCounter]] = None
 
     async def dispatch(self, request: Request, call_next: CallNext) -> Response:
@@ -317,8 +316,8 @@ class CloudflareCheckMiddleware(BaseHTTPMiddleware):
         if ip and await self.is_cloudflare_ip(ip):
             return await call_next(request)
 
-        extra = {'extra': await request_log_extra(request)}
-        logger.warning('Request not routed through cloudflare ip=%s url="%s"', ip, request.url, extra=extra)
+        extra = {'extra': await request_log_extra(request), 'cf_ip_ranges': self.ip_ranges}
+        logger.warning('Request not routed through CloudFlare ip=%s url="%s"', ip, request.url, extra=extra)
         return Response(self.response_body, status_code=400)
 
     async def is_cloudflare_ip(self, ip: str) -> bool:
@@ -343,7 +342,7 @@ class CloudflareCheckMiddleware(BaseHTTPMiddleware):
 async def get_cloudflare_ips() -> List[IPRangeCounter]:
     """
     Get a list of cloudflare IPs from https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6,
-    see https://www.cloudflare.com/en-gb/ips/ for details
+    see https://www.cloudflare.com/en-gb/ips/ for details.
     """
 
     async def get_ips(v: Literal[4, 6]) -> List[IPRangeCounter]:
@@ -352,4 +351,6 @@ async def get_cloudflare_ips() -> List[IPRangeCounter]:
         return [IPRangeCounter(ip) for ip in r.text.strip().split('\n')]
 
     v4_ips, v6_ips = await asyncio.gather(get_ips(4), get_ips(6))
-    return v4_ips + v6_ips
+    ips = v4_ips + v6_ips
+    logger.info('downloaded %d IPs from CloudFlare to check requests against', len(ips))
+    return ips
