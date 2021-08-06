@@ -76,6 +76,11 @@ async def test_direct_ok(create_request, settings, dummy_server: DummyServer):
     await check_recaptcha(create_request(), '__ok__')
 
 
+async def test_direct_request_origin(create_request, settings, dummy_server: DummyServer):
+    settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
+    await check_recaptcha(create_request(headers={'origin': 'https://foo.com'}), '__ok__ host:foo.com')
+
+
 async def test_direct_wrong_host(create_request, settings, dummy_server: DummyServer):
     settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     with pytest.raises(exceptions.HttpBadRequest):
