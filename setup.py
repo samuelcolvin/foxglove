@@ -48,6 +48,7 @@ setup(
     zip_safe=True,
     install_requires=[
         'arq>=0.19.1',
+        'aioredis>=1.3.1,<2',
         'asyncpg>=0.23.0',
         'fastapi>=0.66.1',
         'itsdangerous>=1.1.0',
