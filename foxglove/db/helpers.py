@@ -62,6 +62,10 @@ class _LockedExecute:
         async with self._lock:
             return await self._conn.executemany_b(*args, **kwargs)
 
+    async def copy_from_query(self, *args, **kwargs):
+        async with self._lock:
+            return await self._conn.copy_from_query(*args, **kwargs)
+
 
 class DummyPgTransaction(_LockedExecute):
     _tr = None
