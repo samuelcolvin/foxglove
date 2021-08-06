@@ -179,6 +179,8 @@ def _shell():
         'from pathlib import Path',
         'from pprint import pprint as pp',
         '',
+        'from foxglove import glove',
+        '',
         'sys.path.append(os.getcwd())',
         f'ROOT_PATH = Path("{ROOT_PATH}")',
         'sys.path.append(str(ROOT_PATH))',
@@ -186,6 +188,7 @@ def _shell():
         '',
         f'from {settings_path} import {settings_name}',
         'settings = Settings()',
+        'await glove.startup()',
     ]
     exec_lines += ['print("\\n    Python {v.major}.{v.minor}.{v.micro}\\n".format(v=sys.version_info))'] + [
         f"print('    {line}')" for line in exec_lines

@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Optional
+from typing import Optional, Set
 
 from starlette.datastructures import URL
 from starlette.requests import Request
@@ -13,7 +13,9 @@ logger = logging.getLogger('foxglove.recaptcha')
 TESTING_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 
 
-async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, error_headers=None) -> None:
+async def check_recaptcha(
+    request: Request, recaptcha_token: Optional[str], *, allowed_hosts: Set[str] = None, error_headers=None
+) -> None:
     client_ip = get_ip(request)
 
     if not recaptcha_token:
@@ -27,19 +29,21 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
     r.raise_for_status()
     data = r.json()
 
-    # if settings.origin exists, use that instead of the request to avoid problems with old browsers that don't include
-    # the Origin header
-    if origin := getattr(settings, 'origin', None):
-        request_host = URL(origin).hostname
-    else:
-        request_host = request.url.hostname
-        # using the origin here if available instead of host avoids problems when requests are proxied e.g. with netlify
-        if origin := request.headers.get('origin'):
-            request_host = re.sub('^https?://', '', origin)
+    # use allowed_hosts or settings.origin exists, instead of the request to avoid problems with old browsers
+    # that don't include the Origin header
+    if allowed_hosts is None:
+        if origin := getattr(settings, 'origin', None):
+            allowed_hosts = {URL(origin).hostname}
+        elif origin := request.headers.get('origin'):
+            # using the origin here if available instead of host avoids problems when requests
+            # are proxied e.g. with netlify
+            allowed_hosts = {re.sub('^https?://', '', origin)}
+        else:
+            allowed_hosts = {request.url.hostname}
 
     if data['success']:
         hostname = data['hostname']
-        if hostname == request_host:
+        if hostname in allowed_hosts:
             logger.info('recaptcha success')
             return
         elif settings.dev_mode and settings.recaptcha_secret == TESTING_SECRET and hostname == 'testkey.google.com':
@@ -47,9 +51,9 @@ async def check_recaptcha(request: Request, recaptcha_token: Optional[str], *, e
             return
 
     logger.warning(
-        'recaptcha failure, path=%s request_host=%s ip=%s response=%s',
+        'recaptcha failure, path=%s allowed_hosts=%s ip=%s response=%s',
         request.url.path,
-        request_host,
+        ','.join(allowed_hosts),
         client_ip,
         r.text,
         extra={'recaptcha_response': data, 'recaptcha_token': recaptcha_token, 'headers': dict(request.headers)},
