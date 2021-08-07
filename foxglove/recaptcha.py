@@ -67,5 +67,9 @@ class RecaptchaDepends:
     def __init__(self, request: Request):
         self.request = request
 
-    async def __call__(self, recaptcha_token: Optional[str], *, error_headers=None) -> None:
-        return await check_recaptcha(self.request, recaptcha_token, error_headers=error_headers)
+    async def __call__(
+        self, recaptcha_token: Optional[str], *, allowed_hosts: Set[str] = None, error_headers=None
+    ) -> None:
+        return await check_recaptcha(
+            self.request, recaptcha_token, allowed_hosts=allowed_hosts, error_headers=error_headers
+        )
