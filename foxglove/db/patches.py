@@ -4,20 +4,24 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
-from typing import Callable, Dict, Type
+from typing import Any, Awaitable, Callable, Dict, List, Type
+
+from buildpg.asyncpg import BuildPgConnection
 
 from .. import glove
 from .helpers import DummyPgPool
 
 logger = logging.getLogger('foxglove.patch')
-patches = []
-__all__ = 'run_patch', 'patch', 'update_enums', 'run_sql_section'
+patches: List['Patch'] = []
+__all__ = 'run_patch', 'patch', 'update_enums', 'run_sql_section', 'Patch', 'patches', 'get_sql_section'
 
 
 @dataclass
 class Patch:
-    func: Callable
+    func: Callable[[BuildPgConnection, ...], Awaitable[Any]]
     direct: bool = False
+    auto_ref: str = None
+    auto_ref_sql_section: str = None
 
 
 def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
@@ -91,14 +95,19 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
         await conn.close()
 
 
-def patch(func_=None, /, direct=False):
+def patch(func_=None, /, direct=False, auto_ref: str = None, auto_ref_sql_section: str = None):
     if func_:
-        patches.append(Patch(func=func_))
+        patches.append(Patch(func_))
         return func_
     else:
 
         def wrapper(func):
-            patches.append(Patch(func=func, direct=direct))
+            if direct and auto_ref:
+                raise TypeError(
+                    'patches with direct=True, cannot also have auto_ref set since migrations '
+                    'run in a single transaction'
+                )
+            patches.append(Patch(func, direct, auto_ref, auto_ref_sql_section))
             return func
 
         return wrapper
@@ -119,7 +128,20 @@ async def update_enums(enums: Dict[str, Type[Enum]], conn):
     """
     for name, enum in enums.items():
         for t in enum:
-            await conn.execute(f"ALTER TYPE {name} ADD VALUE IF NOT EXISTS '{t.value}'")
+            await conn.execute(f"alter type {name} add value if not exists '{t.value}'")
+
+
+def get_sql_section(section_name: str, sql: str) -> str:
+    """
+    retrieve a block of code from a sql string (eg. settings.sql) based on tags in the following format:
+        -- { <chunk name>
+        <sql to run>
+        -- } <chunk name>
+    """
+    m = re.search(f'^-- *{{+ *{section_name}(.*)^-- *}}+ *{section_name}', sql, flags=re.DOTALL | re.MULTILINE)
+    if not m:
+        raise RuntimeError(f'chunk with name "{section_name}" not found')
+    return m.group(1).strip(' \n')
 
 
 async def run_sql_section(section_name, sql, conn):
@@ -129,9 +151,6 @@ async def run_sql_section(section_name, sql, conn):
         <sql to run>
         -- } <chunk name>
     """
-    m = re.search(f'^-- *{{+ *{section_name}(.*)^-- *}}+ *{section_name}', sql, flags=re.DOTALL | re.MULTILINE)
-    if not m:
-        raise RuntimeError(f'chunk with name "{section_name}" not found')
+    sql = get_sql_section(section_name, sql)
     logger.info('run_sql_section running section "%s"', section_name)
-    sql = m.group(1).strip(' \n')
     await conn.execute(sql)

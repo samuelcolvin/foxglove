@@ -7,6 +7,8 @@ from buildpg import asyncpg
 from buildpg.asyncpg import BuildPgConnection
 
 from ..settings import BaseSettings
+from .migrations import run_migrations
+from .utils import AsyncPgContext
 
 logger = logging.getLogger('foxglove.db')
 __all__ = 'create_pg_pool', 'prepare_database', 'reset_database', 'lenient_conn'
@@ -21,7 +23,13 @@ async def create_pg_pool(settings: BaseSettings) -> asyncpg.BuildPgPool:
     )
 
 
-async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> bool:  # noqa: C901 (ignore complexity)
+async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> bool:
+    db_created = await create_database(settings, overwrite_existing)
+    await run_migrations(settings)
+    return db_created
+
+
+async def create_database(settings: BaseSettings, overwrite_existing: bool) -> bool:  # noqa: C901 (ignore complexity)
     """
     (Re)create a fresh database and run migrations.
     :param settings: settings to use for db connection
@@ -77,20 +85,14 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
             await conn.close()
 
     logger.debug('dropping and re-creating teh schema...')
-    conn = await asyncpg.connect(dsn=settings.pg_dsn)
-    try:
+    async with AsyncPgContext(settings.pg_dsn) as conn:
         async with conn.transaction():
             await conn.execute('drop schema public cascade;\ncreate schema public;')
-    finally:
-        await conn.close()
 
     logger.debug('creating tables from model definition...')
-    conn = await asyncpg.connect(dsn=settings.pg_dsn)
-    try:
+    async with AsyncPgContext(settings.pg_dsn) as conn:
         async with conn.transaction():
             await conn.execute(settings.sql)
-    finally:
-        await conn.close()
     logger.info('database successfully setup ✓')
     return True
 
