@@ -2,26 +2,37 @@ import asyncio
 import logging
 import os
 
-from async_timeout import timeout
-from buildpg import asyncpg
-from buildpg.asyncpg import BuildPgConnection
+from buildpg.asyncpg import BuildPgPool, DuplicateDatabaseError, UniqueViolationError, create_pool_b
 
 from ..settings import BaseSettings
+from .utils import AsyncPgContext, lenient_conn
 
 logger = logging.getLogger('foxglove.db')
-__all__ = 'create_pg_pool', 'prepare_database', 'reset_database', 'lenient_conn'
+__all__ = 'create_pg_pool', 'prepare_database', 'reset_database'
 
 
-async def create_pg_pool(settings: BaseSettings) -> asyncpg.BuildPgPool:
-    await prepare_database(settings, False)
-    return await asyncpg.create_pool_b(
+async def create_pg_pool(settings: BaseSettings, *, run_migrations: bool = True) -> BuildPgPool:
+    await prepare_database(settings, False, run_migrations=run_migrations)
+    return await create_pool_b(
         settings.pg_dsn,
         min_size=settings.pg_pool_min_size,
         max_size=settings.pg_pool_max_size,
     )
 
 
-async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> bool:  # noqa: C901 (ignore complexity)
+async def prepare_database(settings: BaseSettings, overwrite_existing: bool, *, run_migrations: bool = True) -> bool:
+    db_created = await create_database(settings, overwrite_existing)
+    if settings.pg_migrations and run_migrations:
+        from .migrations import run_migrations as run_migrations_
+        from .patches import import_patches
+
+        patches = import_patches(settings)
+
+        await run_migrations_(settings, patches, True)
+    return db_created
+
+
+async def create_database(settings: BaseSettings, overwrite_existing: bool) -> bool:  # noqa: C901 (ignore complexity)
     """
     (Re)create a fresh database and run migrations.
     :param settings: settings to use for db connection
@@ -62,7 +73,7 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
             logger.debug('attempting to create database "%s"...', settings.pg_name)
             try:
                 await conn.execute(f'create database {settings.pg_name}')
-            except (asyncpg.DuplicateDatabaseError, asyncpg.UniqueViolationError):
+            except (DuplicateDatabaseError, UniqueViolationError):
                 if overwrite_existing:
                     logger.debug('database already exists...')
                 else:
@@ -77,20 +88,14 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
             await conn.close()
 
     logger.debug('dropping and re-creating teh schema...')
-    conn = await asyncpg.connect(dsn=settings.pg_dsn)
-    try:
+    async with AsyncPgContext(settings.pg_dsn) as conn:
         async with conn.transaction():
             await conn.execute('drop schema public cascade;\ncreate schema public;')
-    finally:
-        await conn.close()
 
     logger.debug('creating tables from model definition...')
-    conn = await asyncpg.connect(dsn=settings.pg_dsn)
-    try:
+    async with AsyncPgContext(settings.pg_dsn) as conn:
         async with conn.transaction():
             await conn.execute(settings.sql)
-    finally:
-        await conn.close()
     logger.info('database successfully setup ✓')
     return True
 
@@ -102,25 +107,3 @@ def reset_database(settings: BaseSettings):
         logger.info('resetting database...')
         asyncio.run(prepare_database(settings, True))
         logger.info('done.')
-
-
-async def lenient_conn(settings: BaseSettings, *, with_db: bool = True, sleep: float = 1) -> BuildPgConnection:
-    if with_db:
-        dsn = settings.pg_dsn
-    else:
-        dsn, _ = settings.pg_dsn.rsplit('/', 1)
-
-    for retry in range(8, -1, -1):
-        try:
-            async with timeout(2):
-                conn = await asyncpg.connect_b(dsn=dsn)
-        except (asyncpg.PostgresError, OSError) as e:
-            if retry == 0:
-                raise
-            else:
-                logger.warning('pg temporary connection error "%s", %d retries remaining...', e, retry)
-                await asyncio.sleep(sleep)
-        else:
-            log = logger.debug if retry == 8 else logger.info
-            log('pg connection successful, version: %s', await conn.fetchval('SELECT version()'))
-            return conn

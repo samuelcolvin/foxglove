@@ -61,6 +61,7 @@ class BaseSettings(PydanticBaseSettings):
     pg_db_exists = False
     pg_pool_min_size: int = 10
     pg_pool_max_size: int = 10
+    pg_migrations: bool = False
 
     redis_settings: Optional[RedisSettings] = redis_settings_default
     port: int = 8000

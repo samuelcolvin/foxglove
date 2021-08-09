@@ -4,25 +4,35 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
-from typing import Callable, Dict, Type
+from typing import Any, Callable, Dict, List, Type, Union
 
 from .. import glove
+from ..settings import BaseSettings
 from .helpers import DummyPgPool
 
-logger = logging.getLogger('foxglove.patch')
-patches = []
-__all__ = 'run_patch', 'patch', 'update_enums', 'run_sql_section'
+logger = logging.getLogger('foxglove.db.patch')
+_patch_list: List['Patch'] = []
+__all__ = (
+    'run_patch',
+    'patch',
+    'update_enums',
+    'run_sql_section',
+    'Patch',
+    'get_sql_section',
+    'import_patches',
+)
 
 
 @dataclass
 class Patch:
-    func: Callable
+    func: Callable[..., Any]
     direct: bool = False
+    auto_run: Union[None, bool, str] = None
+    auto_sql_section: str = None
 
 
 def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
-    for path in getattr(glove.settings, 'patch_paths', []):
-        import_module(path)
+    patches = import_patches(glove.settings)
 
     if patch_name is None:
         logger.info(
@@ -43,14 +53,14 @@ def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
         if not live:
             logger.error('direct patches must be called with "--live"')
             return 1
-        logger.info(f'running patch {patch_name} direct')
+        log_msg = f'running patch {patch_name} direct'
     else:
-        logger.info(f'running patch {patch_name} live {live}')
+        log_msg = f'running patch {patch_name} {"live" if live else "not live"}'
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(_run_patch(patch, live, args)) or 0
+    return loop.run_until_complete(_run_patch(patch, live, args, log_msg)) or 0
 
 
-async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
+async def _run_patch(patch: Patch, live: bool, args: Dict[str, str], log_msg: str):
     from .main import lenient_conn
 
     conn = await lenient_conn(glove.settings)
@@ -58,10 +68,10 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
     if not patch.direct:
         tr = conn.transaction()
         await tr.start()
-    logger.info('=' * 40)
     glove.pg = DummyPgPool(conn)
-    await glove.startup()
+    await glove.startup(run_migrations=False)
     kwargs = dict(conn=conn, live=live, args=args, logger=logger)
+    logger.info('{:-^50}'.format(f' {log_msg} '))
     try:
         if asyncio.iscoroutinefunction(patch.func):
             result = await patch.func(**kwargs)
@@ -70,35 +80,39 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
         if result is not None:
             logger.info('result: %s', result)
     except BaseException:
-        logger.info('=' * 40)
+        logger.info('{:-^50}'.format(' error '))
         logger.exception('Error running %s patch', patch.func.__name__)
         if not patch.direct:
             await tr.rollback()
         return 1
     else:
-        logger.info('=' * 40)
         if patch.direct:
-            logger.info('committed patch')
+            logger.info('{:-^50}'.format(' committed patch '))
         else:
             if live:
-                logger.info('live, committed patch')
+                logger.info('{:-^50}'.format(' live, committed patch '))
                 await tr.commit()
             else:
-                logger.info('not live, rolling back')
+                logger.info('{:-^50}'.format(' not live, rolling back '))
                 await tr.rollback()
     finally:
         await glove.shutdown()
         await conn.close()
 
 
-def patch(func_=None, /, direct=False):
+def patch(func_=None, /, direct=False, auto_run: Union[str, bool] = None, auto_sql_section: str = None):
     if func_:
-        patches.append(Patch(func=func_))
+        _patch_list.append(Patch(func_))
         return func_
     else:
 
         def wrapper(func):
-            patches.append(Patch(func=func, direct=direct))
+            if direct and auto_run:
+                raise TypeError(
+                    'patches with direct=True, cannot also have auto_run set since migrations '
+                    'run in a single transaction'
+                )
+            _patch_list.append(Patch(func, direct, auto_run, auto_sql_section))
             return func
 
         return wrapper
@@ -119,7 +133,20 @@ async def update_enums(enums: Dict[str, Type[Enum]], conn):
     """
     for name, enum in enums.items():
         for t in enum:
-            await conn.execute(f"ALTER TYPE {name} ADD VALUE IF NOT EXISTS '{t.value}'")
+            await conn.execute(f"alter type {name} add value if not exists '{t.value}'")
+
+
+def get_sql_section(section_name: str, sql: str) -> str:
+    """
+    retrieve a block of code from a sql string (eg. settings.sql) based on tags in the following format:
+        -- { <chunk name>
+        <sql to run>
+        -- } <chunk name>
+    """
+    m = re.search(f'^-- *{{+ *{section_name}(.*)^-- *}}+ *{section_name}', sql, flags=re.DOTALL | re.MULTILINE)
+    if not m:
+        raise RuntimeError(f'chunk with name "{section_name}" not found')
+    return m.group(1).strip(' \n')
 
 
 async def run_sql_section(section_name, sql, conn):
@@ -129,9 +156,12 @@ async def run_sql_section(section_name, sql, conn):
         <sql to run>
         -- } <chunk name>
     """
-    m = re.search(f'^-- *{{+ *{section_name}(.*)^-- *}}+ *{section_name}', sql, flags=re.DOTALL | re.MULTILINE)
-    if not m:
-        raise RuntimeError(f'chunk with name "{section_name}" not found')
+    sql = get_sql_section(section_name, sql)
     logger.info('run_sql_section running section "%s"', section_name)
-    sql = m.group(1).strip(' \n')
     await conn.execute(sql)
+
+
+def import_patches(settings: BaseSettings) -> List[Patch]:
+    for path in getattr(settings, 'patch_paths', []):
+        import_module(path)
+    return _patch_list

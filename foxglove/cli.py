@@ -4,7 +4,6 @@ import locale
 import logging
 import os
 import sys
-from importlib import import_module
 from pathlib import Path
 from typing import Callable, List
 
@@ -134,11 +133,22 @@ def _patch(
     from .db.patches import run_patch
 
     # wait_for_services(settings)
-    for path in settings.patch_paths:
-        import_module(path)
 
     arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_args)}
     return run_patch(patch_name, live, arg_lookup)
+
+
+@cli.command(name='migrations')
+def _migrations(live: bool = False):
+    """
+    Run migrations, this is also run won glove.startup()
+    """
+    from .db.migrations import run_migrations
+    from .db.patches import import_patches
+
+    logger.info('running migrations...')
+    patches = import_patches(settings)
+    asyncio.run(run_migrations(settings, patches, live))
 
 
 @cli.command(name='reset_database')

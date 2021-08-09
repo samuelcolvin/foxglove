@@ -95,3 +95,17 @@ def test_worker():
         assert 'running demo worker function, ans: 256' in result.output
     finally:
         asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+
+
+def test_reset_database(mocker):
+    mock_uvicorn_run = mocker.patch('foxglove.db.reset_database')
+    result = runner.invoke(cli, ['-s', 'demo.settings', 'reset_database'])
+    assert 'running reset_database...' in result.output
+    assert mock_uvicorn_run.call_count == 1
+
+
+def test_run_migrations(mocker):
+    mock_uvicorn_run = mocker.patch('foxglove.db.migrations.run_migrations')
+    result = runner.invoke(cli, ['-s', 'demo.settings', 'migrations'])
+    assert 'running migrations...' in result.output
+    assert mock_uvicorn_run.call_count == 1

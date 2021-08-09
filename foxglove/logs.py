@@ -2,6 +2,7 @@ import logging
 import logging.config
 import os
 import traceback
+from functools import lru_cache
 from io import StringIO
 from typing import Any, Dict
 
@@ -98,6 +99,7 @@ def get_env_multiple(*names):
             return v
 
 
+@lru_cache
 def setup_sentry() -> bool:
     if glove.settings.sentry_dsn:
         import sentry_sdk
