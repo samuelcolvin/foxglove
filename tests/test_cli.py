@@ -106,6 +106,6 @@ def test_reset_database(mocker):
 
 def test_run_migrations(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.db.migrations.run_migrations')
-    result = runner.invoke(cli, ['-s', 'demo.settings', 'run_migrations'])
+    result = runner.invoke(cli, ['-s', 'demo.settings', 'migrations'])
     assert 'running migrations...' in result.output
     assert mock_uvicorn_run.call_count == 1

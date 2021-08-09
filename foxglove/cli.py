@@ -138,8 +138,8 @@ def _patch(
     return run_patch(patch_name, live, arg_lookup)
 
 
-@cli.command(name='run_migrations')
-def _run_migrations(live: bool = False):
+@cli.command(name='migrations')
+def _migrations(live: bool = False):
     """
     Run migrations, this is also run won glove.startup()
     """
