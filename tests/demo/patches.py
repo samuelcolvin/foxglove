@@ -27,7 +27,7 @@ async def insert_org(conn: BuildPgConnection, args: Dict[str, str], **kwargs):
         raise RuntimeError('deliberate error')
 
 
-@patch(auto_ref='run_full_name#1', auto_ref_sql_section='full_name')
+@patch(auto_run=True, auto_sql_section='full_name')
 async def run_full_name(conn: BuildPgConnection, args: Dict[str, str], **kwargs):
     """
     example of migrations patch

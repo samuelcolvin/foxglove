@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
-from typing import Any, Callable, Dict, List, Type
+from typing import Any, Callable, Dict, List, Type, Union
 
 from .. import glove
 from ..settings import BaseSettings
@@ -27,8 +27,8 @@ __all__ = (
 class Patch:
     func: Callable[..., Any]
     direct: bool = False
-    auto_ref: str = None
-    auto_ref_sql_section: str = None
+    auto_run: Union[None, bool, str] = None
+    auto_sql_section: str = None
 
 
 def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
@@ -100,19 +100,19 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str], log_msg: st
         await conn.close()
 
 
-def patch(func_=None, /, direct=False, auto_ref: str = None, auto_ref_sql_section: str = None):
+def patch(func_=None, /, direct=False, auto_run: Union[str, bool] = None, auto_sql_section: str = None):
     if func_:
         _patch_list.append(Patch(func_))
         return func_
     else:
 
         def wrapper(func):
-            if direct and auto_ref:
+            if direct and auto_run:
                 raise TypeError(
-                    'patches with direct=True, cannot also have auto_ref set since migrations '
+                    'patches with direct=True, cannot also have auto_run set since migrations '
                     'run in a single transaction'
                 )
-            _patch_list.append(Patch(func, direct, auto_ref, auto_ref_sql_section))
+            _patch_list.append(Patch(func, direct, auto_run, auto_sql_section))
             return func
 
         return wrapper

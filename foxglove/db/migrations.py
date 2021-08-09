@@ -19,13 +19,11 @@ __all__ = ('run_migrations',)
 migrations_table = """
 create table if not exists migrations (
   id serial primary key,
-  patch_name varchar(255) not null,
-  auto_ref varchar(255) not null,
-  sql_section_name varchar(255) not null,
-  sql_section_content text not null,
+  ref varchar(255) not null,
+  sql_section text not null,
 
   ts timestamptz not null default current_timestamp,
-  unique (patch_name, auto_ref, sql_section_name, sql_section_content)
+  unique (ref, sql_section)
 );
 """
 
@@ -35,7 +33,7 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
     Migrations in foxglove are handled by patches which are run automatically if
     foxglove spots they haven't been run before
     """
-    migration_patches = [p for p in patches if p.auto_ref]
+    migration_patches = [p for p in patches if p.auto_run]
     if not migration_patches:
         return 0
 
@@ -57,30 +55,31 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
         glove.pg = DummyPgPool(conn)
         logger.info('checking %d migration patches...', len(migration_patches))
         for patch in migration_patches:
-            patch_name = patch.func.__name__
-            if patch.auto_ref_sql_section:
-                sql_section_content = get_sql_section(patch.auto_ref_sql_section, settings.sql)
+            if patch.auto_sql_section:
+                content = get_sql_section(patch.auto_sql_section, settings.sql)
+                sql_section = f'{patch.auto_sql_section}::\n{content}'
             else:
-                sql_section_content = None
+                # '-' is required to make the unique constraint work since null would mean rows won't conflict
+                sql_section = '-'
 
-            # "or '-'" is required to make sure the unique constraint works since null would mean rows won't conflict
+            patch_ref = patch.func.__name__
+            if isinstance(patch.auto_run, str):
+                patch_ref += f':{patch.auto_run}'
             migration_id = await conn.fetchval(
                 """
-                insert into migrations (patch_name, auto_ref, sql_section_name, sql_section_content)
-                values ($1, $2, $3, $4)
-                on conflict (patch_name, auto_ref, sql_section_name, sql_section_content) do nothing
+                insert into migrations (ref, sql_section)
+                values ($1, $2)
+                on conflict (ref, sql_section) do nothing
                 returning id
                 """,
-                patch_name,
-                patch.auto_ref,
-                patch.auto_ref_sql_section or '-',
-                sql_section_content or '-',
+                patch_ref,
+                sql_section,
             )
             if migration_id is None:
                 up_to_date += 1
                 continue
 
-            successful = await run_patch(conn, patch, patch_name, live)
+            successful = await run_patch(conn, patch, patch_ref, live)
             if not successful:
                 logger.warning('patch failed, rolling back all %d migration patches in this session', count)
                 await tr.rollback()
@@ -100,9 +99,9 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
     return count
 
 
-async def run_patch(conn: BuildPgConnection, patch: Patch, name: str, live: bool) -> bool:
+async def run_patch(conn: BuildPgConnection, patch: Patch, ref: str, live: bool) -> bool:
     kwargs = dict(conn=conn, live=live, args={'__auto_migrations__': 'true'}, logger=logger)
-    logger.info('{:-^50}'.format(f' running {name} '))
+    logger.info('{:-^50}'.format(f' running {ref} '))
     try:
         if asyncio.iscoroutinefunction(patch.func):
             result = await patch.func(**kwargs)
@@ -111,9 +110,9 @@ async def run_patch(conn: BuildPgConnection, patch: Patch, name: str, live: bool
         if result is not None:
             logger.info('result: %s', result)
     except BaseException:
-        logger.info('{:-^50}'.format(f' {name} failed '))
+        logger.info('{:-^50}'.format(f' {ref} failed '))
         logger.exception('Error running %s migration patch', patch.func.__name__)
         return False
     else:
-        logger.info('{:-^50}'.format(f' {name} succeeded '))
+        logger.info('{:-^50}'.format(f' {ref} succeeded '))
         return True

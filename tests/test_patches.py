@@ -53,7 +53,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
     async def ok_patch(logger, **kwargs):
         logger.info('running ok_patch')
 
-    patches = [Patch(ok_patch, auto_ref='foobar')]
+    patches = [Patch(ok_patch, auto_run='foobar')]
 
     caplog.set_level(logging.DEBUG, 'foxglove.db')
     assert await run_migrations(settings, patches, True) == 1
@@ -64,10 +64,8 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
 
     assert migrations == {
         'id': AnyInt(),
-        'patch_name': 'ok_patch',
-        'auto_ref': 'foobar',
-        'sql_section_name': '-',
-        'sql_section_content': '-',
+        'ref': 'ok_patch:foobar',
+        'sql_section': '-',
         'ts': CloseToNow(),
     }
     assert await run_migrations(settings, patches, True) == 0
@@ -82,9 +80,9 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
 
     assert caplog.messages == [
         'checking 1 migration patches...',
-        '---------------- running ok_patch ----------------',
+        '------------ running ok_patch:foobar -------------',
         'running ok_patch',
-        '--------------- ok_patch succeeded ---------------',
+        '----------- ok_patch:foobar succeeded ------------',
         '1 migration patches run, 0 already up to date ✓',
         'checking 1 migration patches...',
         '0 migration patches run, 1 already up to date ✓',
@@ -99,7 +97,7 @@ async def test_run_migrations_error(settings: BaseSettings, wipe_db, caplog):
     async def error_patch(**kwargs):
         raise ValueError('broken')
 
-    patches = [Patch(ok_patch, auto_ref='foobar'), Patch(error_patch, auto_ref='foobar')]
+    patches = [Patch(ok_patch, auto_run=True), Patch(error_patch, auto_run=True)]
 
     caplog.set_level(logging.INFO, 'foxglove.db')
     assert await run_migrations(settings, patches, True) == 0
@@ -133,7 +131,7 @@ async def test_run_migrations_not_live(settings: BaseSettings, wipe_db, db_conn,
     async def ok_patch(logger, **kwargs):
         logger.info('running ok_patch')
 
-    patches = [Patch(ok_patch, auto_ref='foobar')]
+    patches = [Patch(ok_patch, auto_run=True)]
 
     caplog.set_level(logging.DEBUG, 'foxglove.db')
     assert await run_migrations(settings, patches, False) == 1

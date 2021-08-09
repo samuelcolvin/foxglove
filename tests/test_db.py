@@ -42,10 +42,9 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
 
     assert migrations == {
         'id': AnyInt(),
-        'patch_name': 'run_full_name',
-        'auto_ref': 'run_full_name#1',
-        'sql_section_name': 'full_name',
-        'sql_section_content': (
+        'ref': 'run_full_name',
+        'sql_section': (
+            'full_name::\n'
             'create or replace function full_name(u users) returns varchar as $$\n'
             '  begin\n'
             "    return coalesce(u.first_name || ' ' || u.last_name, u.first_name, u.last_name);\n"
