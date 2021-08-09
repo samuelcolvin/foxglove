@@ -9,11 +9,21 @@ from typing import Any, Awaitable, Callable, Dict, List, Type
 from buildpg.asyncpg import BuildPgConnection
 
 from .. import glove
+from ..settings import BaseSettings
 from .helpers import DummyPgPool
 
 logger = logging.getLogger('foxglove.patch')
 patches: List['Patch'] = []
-__all__ = 'run_patch', 'patch', 'update_enums', 'run_sql_section', 'Patch', 'patches', 'get_sql_section'
+__all__ = (
+    'run_patch',
+    'patch',
+    'update_enums',
+    'run_sql_section',
+    'Patch',
+    'patches',
+    'get_sql_section',
+    'import_patches',
+)
 
 
 @dataclass
@@ -25,8 +35,7 @@ class Patch:
 
 
 def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
-    for path in getattr(glove.settings, 'patch_paths', []):
-        import_module(path)
+    import_patches(glove.settings)
 
     if patch_name is None:
         logger.info(
@@ -47,14 +56,14 @@ def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
         if not live:
             logger.error('direct patches must be called with "--live"')
             return 1
-        logger.info(f'running patch {patch_name} direct')
+        log_msg = f'running patch {patch_name} direct'
     else:
-        logger.info(f'running patch {patch_name} live {live}')
+        log_msg = f'running patch {patch_name} {"live" if live else "not live"}'
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(_run_patch(patch, live, args)) or 0
+    return loop.run_until_complete(_run_patch(patch, live, args, log_msg)) or 0
 
 
-async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
+async def _run_patch(patch: Patch, live: bool, args: Dict[str, str], log_msg: str):
     from .main import lenient_conn
 
     conn = await lenient_conn(glove.settings)
@@ -62,10 +71,10 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
     if not patch.direct:
         tr = conn.transaction()
         await tr.start()
-    logger.info('=' * 40)
     glove.pg = DummyPgPool(conn)
     await glove.startup()
     kwargs = dict(conn=conn, live=live, args=args, logger=logger)
+    logger.info('{:-^50}'.format(f' {log_msg} '))
     try:
         if asyncio.iscoroutinefunction(patch.func):
             result = await patch.func(**kwargs)
@@ -74,21 +83,20 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str]):
         if result is not None:
             logger.info('result: %s', result)
     except BaseException:
-        logger.info('=' * 40)
+        logger.info('{:-^50}'.format(' error '))
         logger.exception('Error running %s patch', patch.func.__name__)
         if not patch.direct:
             await tr.rollback()
         return 1
     else:
-        logger.info('=' * 40)
         if patch.direct:
-            logger.info('committed patch')
+            logger.info('{:-^50}'.format(' committed patch '))
         else:
             if live:
-                logger.info('live, committed patch')
+                logger.info('{:-^50}'.format(' live, committed patch '))
                 await tr.commit()
             else:
-                logger.info('not live, rolling back')
+                logger.info('{:-^50}'.format(' not live, rolling back '))
                 await tr.rollback()
     finally:
         await glove.shutdown()
@@ -154,3 +162,8 @@ async def run_sql_section(section_name, sql, conn):
     sql = get_sql_section(section_name, sql)
     logger.info('run_sql_section running section "%s"', section_name)
     await conn.execute(sql)
+
+
+def import_patches(settings: BaseSettings):
+    for path in getattr(settings, 'patch_paths', []):
+        import_module(path)

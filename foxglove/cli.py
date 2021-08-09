@@ -4,7 +4,6 @@ import locale
 import logging
 import os
 import sys
-from importlib import import_module
 from pathlib import Path
 from typing import Callable, List
 
@@ -131,11 +130,10 @@ def _patch(
     Run a patch function to update or modify the database.
     """
     logger.info('running patch...')
-    from .db.patches import run_patch
+    from .db.patches import import_patches, run_patch
 
     # wait_for_services(settings)
-    for path in settings.patch_paths:
-        import_module(path)
+    import_patches(settings)
 
     arg_lookup = {k.replace('-', '_'): v for k, v in (a.split(':', 1) for a in patch_args)}
     return run_patch(patch_name, live, arg_lookup)

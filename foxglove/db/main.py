@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 
-from buildpg.asyncpg import BuildPgPool, create_pool_b, DuplicateDatabaseError, UniqueViolationError
+from buildpg.asyncpg import BuildPgPool, DuplicateDatabaseError, UniqueViolationError, create_pool_b
 
 from ..settings import BaseSettings
 from .utils import AsyncPgContext, lenient_conn
@@ -24,7 +24,9 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
     db_created = await create_database(settings, overwrite_existing)
     if settings.pg_migrations:
         from .migrations import run_migrations
-        await run_migrations(settings)
+        from .patches import patches
+
+        await run_migrations(settings, patches)
     return db_created
 
 

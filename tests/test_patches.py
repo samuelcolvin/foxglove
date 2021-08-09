@@ -10,8 +10,11 @@ def test_patch_live(settings: BaseSettings, wipe_db, caplog):
     run_patch('insert_org', True, {})
     with SyncConnContext(settings.pg_dsn) as conn:
         assert conn.fetchval('select count(*) from organisations') == 1
-    assert len(caplog.records) == 5, caplog.text
-    assert 'live, committed patch' in caplog.text
+
+    assert [m for m in caplog.messages if m != 'sentry not initialised'] == [
+        '--------- running patch insert_org live ----------',
+        '------------- live, committed patch --------------',
+    ]
 
 
 def test_patch_dry_run(settings: BaseSettings, wipe_db, caplog):
@@ -20,8 +23,10 @@ def test_patch_dry_run(settings: BaseSettings, wipe_db, caplog):
     with SyncConnContext(settings.pg_dsn) as conn:
         assert conn.fetchval('select count(*) from organisations') == 0
 
-    assert len(caplog.records) == 5, caplog.text
-    assert 'not live, rolling back' in caplog.text
+    assert [m for m in caplog.messages if m != 'sentry not initialised'] == [
+        '------- running patch insert_org not live --------',
+        '------------- not live, rolling back -------------',
+    ]
 
 
 def test_patch_error(settings: BaseSettings, wipe_db, caplog):
@@ -30,5 +35,8 @@ def test_patch_error(settings: BaseSettings, wipe_db, caplog):
     with SyncConnContext(settings.pg_dsn) as conn:
         assert conn.fetchval('select count(*) from organisations') == 0
 
-    assert len(caplog.records) == 5, caplog.text
-    assert 'Error running insert_org patch' in caplog.text
+    assert [m for m in caplog.messages if m != 'sentry not initialised'] == [
+        '------- running patch insert_org not live --------',
+        '--------------------- error ----------------------',
+        'Error running insert_org patch',
+    ]

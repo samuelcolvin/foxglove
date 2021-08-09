@@ -1,8 +1,11 @@
 import logging
 
 import pytest
+from buildpg.asyncpg import BuildPgConnection
+from pytest_toolbox.comparison import AnyInt, CloseToNow
 
 from foxglove.db import prepare_database
+from foxglove.db.utils import AsyncPgContext
 from foxglove.redis import async_flush_redis, flush_redis
 from foxglove.settings import BaseSettings
 from tests.conftest import ConnContext
@@ -10,24 +13,62 @@ from tests.conftest import ConnContext
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.mark.filterwarnings('ignore::DeprecationWarning')
-async def test_prepare_database(db_conn_global, alt_settings: BaseSettings):
+async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings: BaseSettings, caplog):
     await db_conn_global.execute(f'drop database if exists {alt_settings.pg_name}')
+    alt_settings.pg_migrations = True
 
     assert (
         await db_conn_global.fetchval('SELECT true FROM pg_catalog.pg_database where datname=$1', alt_settings.pg_name)
         is None
     )
 
-    assert await prepare_database(alt_settings, True) is True
+    with caplog.at_level(logging.INFO, 'foxglove'):
+        assert await prepare_database(alt_settings, True) is True
 
     assert (
         await db_conn_global.fetchval('SELECT true FROM pg_catalog.pg_database where datname=$1', alt_settings.pg_name)
         is True
     )
 
+    with caplog.at_level(
+        logging.INFO,
+        'foxglove',
+    ):
+        assert await prepare_database(alt_settings, False) is False
 
-async def test_prepare_database_replace(db_conn_global, alt_settings: BaseSettings):
+    async with AsyncPgContext(alt_settings.pg_dsn) as conn:
+        assert await conn.fetchval('select count(*) from migrations') == 1
+        migrations = dict(await conn.fetchrow('select * from migrations'))
+
+    assert migrations == {
+        'id': AnyInt(),
+        'patch_name': 'run_full_name',
+        'auto_ref': 'run_full_name#1',
+        'sql_section_name': 'full_name',
+        'sql_section_content': (
+            'create or replace function full_name(u users) returns varchar as $$\n'
+            '  begin\n'
+            "    return coalesce(u.first_name || ' ' || u.last_name, u.first_name, u.last_name);\n"
+            '  end;\n'
+            '$$ language plpgsql;'
+        ),
+        'ts': CloseToNow(),
+    }
+
+    assert [m for m in caplog.messages if m != 'sentry not initialised'] == [
+        'database successfully setup ✓',
+        'checking 1 migration patches...',
+        '------------- running run_full_name --------------',
+        'run_sql_section running section "full_name"',
+        '------------ run_full_name succeeded -------------',
+        '1 migration patches run, 0 already up to date ✓',
+        'database already exists ✓',
+        'checking 1 migration patches...',
+    ]
+    alt_settings.pg_migrations = False
+
+
+async def test_prepare_database_replace(alt_settings: BaseSettings):
     await prepare_database(alt_settings, True)
 
     async with ConnContext(alt_settings.pg_dsn) as conn:

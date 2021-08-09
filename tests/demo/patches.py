@@ -2,7 +2,8 @@ from typing import Dict
 
 from buildpg.asyncpg import BuildPgConnection
 
-from foxglove.db.patches import patch
+from foxglove import glove
+from foxglove.db.patches import patch, run_sql_section
 
 
 @patch
@@ -24,3 +25,11 @@ async def insert_org(conn: BuildPgConnection, args: Dict[str, str], **kwargs):
     await conn.execute("insert into organisations (name) values ('foobar')")
     if 'fail' in args:
         raise RuntimeError('deliberate error')
+
+
+@patch(auto_ref='run_full_name#1', auto_ref_sql_section='full_name')
+async def run_full_name(conn: BuildPgConnection, args: Dict[str, str], **kwargs):
+    """
+    example of migrations patch
+    """
+    await run_sql_section('full_name', glove.settings.sql, conn)

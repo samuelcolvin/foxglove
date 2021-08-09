@@ -2,8 +2,8 @@ import asyncio
 import logging
 from typing import Optional
 
-from asyncpg import PostgresError
 from async_timeout import timeout
+from asyncpg import PostgresError
 from buildpg.asyncpg import BuildPgConnection, connect_b
 
 from ..settings import BaseSettings
