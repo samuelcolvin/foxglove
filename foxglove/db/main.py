@@ -24,7 +24,9 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> 
     db_created = await create_database(settings, overwrite_existing)
     if settings.pg_migrations:
         from .migrations import run_migrations
-        from .patches import patches
+        from .patches import import_patches
+
+        patches = import_patches(settings)
 
         await run_migrations(settings, patches)
     return db_created

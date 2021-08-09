@@ -6,21 +6,18 @@ from enum import Enum
 from importlib import import_module
 from typing import Any, Awaitable, Callable, Dict, List, Type
 
-from buildpg.asyncpg import BuildPgConnection
-
 from .. import glove
 from ..settings import BaseSettings
 from .helpers import DummyPgPool
 
-logger = logging.getLogger('foxglove.patch')
-patches: List['Patch'] = []
+logger = logging.getLogger('foxglove.db.patch')
+_patch_list: List['Patch'] = []
 __all__ = (
     'run_patch',
     'patch',
     'update_enums',
     'run_sql_section',
     'Patch',
-    'patches',
     'get_sql_section',
     'import_patches',
 )
@@ -28,14 +25,14 @@ __all__ = (
 
 @dataclass
 class Patch:
-    func: Callable[[BuildPgConnection, ...], Awaitable[Any]]
+    func: Callable[..., Awaitable[Any]]
     direct: bool = False
     auto_ref: str = None
     auto_ref_sql_section: str = None
 
 
 def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
-    import_patches(glove.settings)
+    patches = import_patches(glove.settings)
 
     if patch_name is None:
         logger.info(
@@ -105,7 +102,7 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str], log_msg: st
 
 def patch(func_=None, /, direct=False, auto_ref: str = None, auto_ref_sql_section: str = None):
     if func_:
-        patches.append(Patch(func_))
+        _patch_list.append(Patch(func_))
         return func_
     else:
 
@@ -115,7 +112,7 @@ def patch(func_=None, /, direct=False, auto_ref: str = None, auto_ref_sql_sectio
                     'patches with direct=True, cannot also have auto_ref set since migrations '
                     'run in a single transaction'
                 )
-            patches.append(Patch(func, direct, auto_ref, auto_ref_sql_section))
+            _patch_list.append(Patch(func, direct, auto_ref, auto_ref_sql_section))
             return func
 
         return wrapper
@@ -164,6 +161,7 @@ async def run_sql_section(section_name, sql, conn):
     await conn.execute(sql)
 
 
-def import_patches(settings: BaseSettings):
+def import_patches(settings: BaseSettings) -> List[Patch]:
     for path in getattr(settings, 'patch_paths', []):
         import_module(path)
+    return _patch_list

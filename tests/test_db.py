@@ -22,7 +22,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
         is None
     )
 
-    with caplog.at_level(logging.INFO, 'foxglove'):
+    with caplog.at_level(logging.INFO, 'foxglove.db'):
         assert await prepare_database(alt_settings, True) is True
 
     assert (
@@ -55,7 +55,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
         'ts': CloseToNow(),
     }
 
-    assert [m for m in caplog.messages if m != 'sentry not initialised'] == [
+    assert caplog.messages == [
         'database successfully setup ✓',
         'checking 1 migration patches...',
         '------------- running run_full_name --------------',
@@ -64,6 +64,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
         '1 migration patches run, 0 already up to date ✓',
         'database already exists ✓',
         'checking 1 migration patches...',
+        '0 migration patches run, 1 already up to date ✓',
     ]
     alt_settings.pg_migrations = False
 

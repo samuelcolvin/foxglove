@@ -10,7 +10,7 @@ from .helpers import DummyPgPool
 from .patches import Patch, get_sql_section
 from .utils import AsyncPgContext
 
-logger = logging.getLogger('foxglove.migrations')
+logger = logging.getLogger('foxglove.db.migrations')
 
 __all__ = ('run_migrations',)
 
@@ -20,8 +20,8 @@ create table if not exists migrations (
   id serial primary key,
   patch_name varchar(255) not null,
   auto_ref varchar(255) not null,
-  sql_section_name varchar(255),
-  sql_section_content text,
+  sql_section_name varchar(255) not null,
+  sql_section_content text not null,
 
   ts timestamptz not null default current_timestamp,
   unique (patch_name, auto_ref, sql_section_name, sql_section_content)
@@ -54,6 +54,8 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> Option
                 sql_section_content = get_sql_section(patch.auto_ref_sql_section, settings.sql)
             else:
                 sql_section_content = None
+
+            # "or '-'" is required to make sure the unique constraint works since null would mean rows won't conflict
             migration_id = await conn.fetchval(
                 """
                 insert into migrations (patch_name, auto_ref, sql_section_name, sql_section_content)
@@ -63,8 +65,8 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> Option
                 """,
                 patch_name,
                 patch.auto_ref,
-                patch.auto_ref_sql_section,
-                sql_section_content,
+                patch.auto_ref_sql_section or '-',
+                sql_section_content or '-',
             )
             if migration_id is None:
                 up_to_date += 1
@@ -79,8 +81,7 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> Option
             count += 1
 
         await tr.commit()
-        if count:
-            logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
+        logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
         return count
 
 
