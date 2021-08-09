@@ -1,7 +1,8 @@
 import asyncio
 import logging
-from typing import List, Optional
+from typing import List
 
+from asyncpg import LockNotAvailableError
 from buildpg.asyncpg import BuildPgConnection
 
 from .. import glove
@@ -29,16 +30,15 @@ create table if not exists migrations (
 """
 
 
-async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> Optional[int]:
+async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> int:
     """
     Migrations in foxglove are handled by patches which are run automatically if
-    foxglove spots they haven't been run before, or failed
+    foxglove spots they haven't been run before
     """
     migration_patches = [p for p in patches if p.auto_ref]
     if not migration_patches:
         return 0
 
-    logger.info('checking %d migration patches...', len(migration_patches))
     count = 0
     up_to_date = 0
     async with AsyncPgContext(settings.pg_dsn) as conn:
@@ -46,8 +46,14 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> Option
         await tr.start()
 
         await conn.execute(migrations_table)
-        await conn.execute('lock table migrations')
+        try:
+            await conn.execute('lock table migrations nowait')
+        except LockNotAvailableError:
+            logger.debug('another transaction has locked migrations, skipping migrations here')
+            await tr.rollback()
+            return 0
 
+        logger.info('checking %d migration patches...', len(migration_patches))
         for patch in migration_patches:
             patch_name = patch.func.__name__
             if patch.auto_ref_sql_section:
@@ -81,8 +87,9 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> Option
             count += 1
 
         await tr.commit()
-        logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
-        return count
+
+    logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
+    return count
 
 
 async def run_patch(conn: BuildPgConnection, patch: Patch, name: str) -> bool:
@@ -91,7 +98,6 @@ async def run_patch(conn: BuildPgConnection, patch: Patch, name: str) -> bool:
 
     default_pg = getattr(glove, 'pg', None)
     glove.pg = DummyPgPool(conn)
-    # await glove.startup()
     kwargs = dict(conn=conn, live=True, args={'__auto_migrations__': 'true'}, logger=logger)
     logger.info('{:-^50}'.format(f' running {name} '))
     try:

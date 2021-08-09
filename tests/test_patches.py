@@ -55,9 +55,8 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
 
     patches = [Patch(ok_patch, auto_ref='foobar')]
 
-    caplog.set_level(logging.INFO, 'foxglove.db')
+    caplog.set_level(logging.DEBUG, 'foxglove.db')
     assert await run_migrations(settings, patches) == 1
-
     async with AsyncPgContext(settings.pg_dsn) as conn:
         assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is True
         assert await conn.fetchval('select count(*) from migrations') == 1
@@ -76,6 +75,11 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
     async with AsyncPgContext(settings.pg_dsn) as conn:
         assert await conn.fetchval('select count(*) from migrations') == 1
 
+    async with AsyncPgContext(settings.pg_dsn) as conn:
+        async with conn.transaction():
+            await conn.execute('lock table migrations')
+            assert await run_migrations(settings, patches) == 0
+
     assert caplog.messages == [
         'checking 1 migration patches...',
         '---------------- running ok_patch ----------------',
@@ -84,6 +88,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
         '1 migration patches run, 0 already up to date ✓',
         'checking 1 migration patches...',
         '0 migration patches run, 1 already up to date ✓',
+        'another transaction has locked migrations, skipping migrations here',
     ]
 
 
