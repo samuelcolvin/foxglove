@@ -19,10 +19,9 @@ __all__ = ('run_migrations',)
 migrations_table = """
 create table if not exists migrations (
   id serial primary key,
+  ts timestamptz not null default current_timestamp,
   ref varchar(255) not null,
   sql_section text not null,
-
-  ts timestamptz not null default current_timestamp,
   unique (ref, sql_section)
 );
 """
