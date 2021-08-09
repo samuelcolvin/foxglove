@@ -138,6 +138,19 @@ def _patch(
     return run_patch(patch_name, live, arg_lookup)
 
 
+@cli.command(name='run_migrations')
+def _run_migrations(live: bool = False):
+    """
+    Run migrations, this is also run won glove.startup()
+    """
+    from .db.migrations import run_migrations
+    from .db.patches import import_patches
+
+    logger.info('running migrations...')
+    patches = import_patches(settings)
+    asyncio.run(run_migrations(settings, patches, live))
+
+
 @cli.command(name='reset_database')
 def _reset_database():
     """

@@ -19,12 +19,12 @@ class Glove:
     pg: BuildPgPool
     redis: arq.ArqRedis
 
-    async def startup(self) -> None:
+    async def startup(self, *, run_migrations: bool = True) -> None:
         from .logs import setup_sentry
 
         setup_sentry()
         if not hasattr(self, 'pg'):
-            self.pg = await create_pg_pool(self.settings)
+            self.pg = await create_pg_pool(self.settings, run_migrations=run_migrations)
         if not hasattr(self, 'redis') and self.settings.redis_settings:
             self.redis = await arq.create_pool(self.settings.redis_settings)
 

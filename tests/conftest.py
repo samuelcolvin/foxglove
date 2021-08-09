@@ -49,14 +49,14 @@ def fix_loop(event_loop):
 
 @pytest.fixture(scope='session', name='clean_db')
 def fix_clean_db(settings):
-    asyncio.run(prepare_database(settings, True))
+    asyncio.run(prepare_database(settings, True, run_migrations=False))
 
 
 @pytest.fixture(name='wipe_db')
 async def fix_wipe_db(settings):
-    await prepare_database(settings, True)
+    await prepare_database(settings, True, run_migrations=False)
     yield
-    await prepare_database(settings, True)
+    await prepare_database(settings, True, run_migrations=False)
 
 
 @pytest.fixture(name='db_conn')

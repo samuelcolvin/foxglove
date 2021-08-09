@@ -56,7 +56,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
     patches = [Patch(ok_patch, auto_ref='foobar')]
 
     caplog.set_level(logging.DEBUG, 'foxglove.db')
-    assert await run_migrations(settings, patches) == 1
+    assert await run_migrations(settings, patches, True) == 1
     async with AsyncPgContext(settings.pg_dsn) as conn:
         assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is True
         assert await conn.fetchval('select count(*) from migrations') == 1
@@ -70,7 +70,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
         'sql_section_content': '-',
         'ts': CloseToNow(),
     }
-    assert await run_migrations(settings, patches) == 0
+    assert await run_migrations(settings, patches, True) == 0
 
     async with AsyncPgContext(settings.pg_dsn) as conn:
         assert await conn.fetchval('select count(*) from migrations') == 1
@@ -78,7 +78,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
     async with AsyncPgContext(settings.pg_dsn) as conn:
         async with conn.transaction():
             await conn.execute('lock table migrations')
-            assert await run_migrations(settings, patches) == 0
+            assert await run_migrations(settings, patches, True) == 0
 
     assert caplog.messages == [
         'checking 1 migration patches...',
@@ -102,7 +102,7 @@ async def test_run_migrations_error(settings: BaseSettings, wipe_db, caplog):
     patches = [Patch(ok_patch, auto_ref='foobar'), Patch(error_patch, auto_ref='foobar')]
 
     caplog.set_level(logging.INFO, 'foxglove.db')
-    assert await run_migrations(settings, patches) == 0
+    assert await run_migrations(settings, patches, True) == 0
 
     async with AsyncPgContext(settings.pg_dsn) as conn:
         assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is False
@@ -121,9 +121,30 @@ async def test_run_migrations_error(settings: BaseSettings, wipe_db, caplog):
 
 async def test_run_migrations_none(settings: BaseSettings, wipe_db, caplog):
     caplog.set_level(logging.INFO, 'foxglove.db')
-    assert await run_migrations(settings, []) == 0
+    assert await run_migrations(settings, [], True) == 0
 
     async with AsyncPgContext(settings.pg_dsn) as conn:
         assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is False
 
     assert caplog.messages == []
+
+
+async def test_run_migrations_not_live(settings: BaseSettings, wipe_db, db_conn, caplog):
+    async def ok_patch(logger, **kwargs):
+        logger.info('running ok_patch')
+
+    patches = [Patch(ok_patch, auto_ref='foobar')]
+
+    caplog.set_level(logging.DEBUG, 'foxglove.db')
+    assert await run_migrations(settings, patches, False) == 1
+
+    async with AsyncPgContext(settings.pg_dsn) as conn:
+        assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is False
+
+    assert caplog.messages == [
+        'checking 1 migration patches...',
+        '---------------- running ok_patch ----------------',
+        'running ok_patch',
+        '--------------- ok_patch succeeded ---------------',
+        '1 migration patches run, 0 already up to date, not live rolling back',
+    ]

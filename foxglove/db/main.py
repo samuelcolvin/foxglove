@@ -11,8 +11,8 @@ logger = logging.getLogger('foxglove.db')
 __all__ = 'create_pg_pool', 'prepare_database', 'reset_database'
 
 
-async def create_pg_pool(settings: BaseSettings) -> BuildPgPool:
-    await prepare_database(settings, False)
+async def create_pg_pool(settings: BaseSettings, *, run_migrations: bool = True) -> BuildPgPool:
+    await prepare_database(settings, False, run_migrations=run_migrations)
     return await create_pool_b(
         settings.pg_dsn,
         min_size=settings.pg_pool_min_size,
@@ -20,15 +20,15 @@ async def create_pg_pool(settings: BaseSettings) -> BuildPgPool:
     )
 
 
-async def prepare_database(settings: BaseSettings, overwrite_existing: bool) -> bool:
+async def prepare_database(settings: BaseSettings, overwrite_existing: bool, *, run_migrations: bool = True) -> bool:
     db_created = await create_database(settings, overwrite_existing)
-    if settings.pg_migrations:
-        from .migrations import run_migrations
+    if settings.pg_migrations and run_migrations:
+        from .migrations import run_migrations as run_migrations_
         from .patches import import_patches
 
         patches = import_patches(settings)
 
-        await run_migrations(settings, patches)
+        await run_migrations_(settings, patches, True)
     return db_created
 
 

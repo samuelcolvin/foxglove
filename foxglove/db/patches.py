@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
-from typing import Any, Awaitable, Callable, Dict, List, Type
+from typing import Any, Callable, Dict, List, Type
 
 from .. import glove
 from ..settings import BaseSettings
@@ -25,7 +25,7 @@ __all__ = (
 
 @dataclass
 class Patch:
-    func: Callable[..., Awaitable[Any]]
+    func: Callable[..., Any]
     direct: bool = False
     auto_ref: str = None
     auto_ref_sql_section: str = None
@@ -69,7 +69,7 @@ async def _run_patch(patch: Patch, live: bool, args: Dict[str, str], log_msg: st
         tr = conn.transaction()
         await tr.start()
     glove.pg = DummyPgPool(conn)
-    await glove.startup()
+    await glove.startup(run_migrations=False)
     kwargs = dict(conn=conn, live=live, args=args, logger=logger)
     logger.info('{:-^50}'.format(f' {log_msg} '))
     try:

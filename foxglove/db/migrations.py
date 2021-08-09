@@ -30,7 +30,7 @@ create table if not exists migrations (
 """
 
 
-async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> int:
+async def run_migrations(settings: BaseSettings, patches: List[Patch], live: bool) -> int:
     """
     Migrations in foxglove are handled by patches which are run automatically if
     foxglove spots they haven't been run before
@@ -53,6 +53,8 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> int:
             await tr.rollback()
             return 0
 
+        default_pg = getattr(glove, 'pg', None)
+        glove.pg = DummyPgPool(conn)
         logger.info('checking %d migration patches...', len(migration_patches))
         for patch in migration_patches:
             patch_name = patch.func.__name__
@@ -78,27 +80,28 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch]) -> int:
                 up_to_date += 1
                 continue
 
-            successful = await run_patch(conn, patch, patch_name)
+            successful = await run_patch(conn, patch, patch_name, live)
             if not successful:
                 logger.warning('patch failed, rolling back all %d migration patches in this session', count)
                 await tr.rollback()
+                glove.pg = default_pg
                 return 0
 
             count += 1
 
-        await tr.commit()
+        glove.pg = default_pg
+        if live:
+            await tr.commit()
+            logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
+        else:
+            await tr.rollback()
+            logger.info('%d migration patches run, %d already up to date, not live rolling back', count, up_to_date)
 
-    logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
     return count
 
 
-async def run_patch(conn: BuildPgConnection, patch: Patch, name: str) -> bool:
-    patch_tr = conn.transaction()
-    await patch_tr.start()
-
-    default_pg = getattr(glove, 'pg', None)
-    glove.pg = DummyPgPool(conn)
-    kwargs = dict(conn=conn, live=True, args={'__auto_migrations__': 'true'}, logger=logger)
+async def run_patch(conn: BuildPgConnection, patch: Patch, name: str, live: bool) -> bool:
+    kwargs = dict(conn=conn, live=live, args={'__auto_migrations__': 'true'}, logger=logger)
     logger.info('{:-^50}'.format(f' running {name} '))
     try:
         if asyncio.iscoroutinefunction(patch.func):
@@ -110,11 +113,7 @@ async def run_patch(conn: BuildPgConnection, patch: Patch, name: str) -> bool:
     except BaseException:
         logger.info('{:-^50}'.format(f' {name} failed '))
         logger.exception('Error running %s migration patch', patch.func.__name__)
-        await patch_tr.rollback()
         return False
     else:
         logger.info('{:-^50}'.format(f' {name} succeeded '))
-        await patch_tr.commit()
         return True
-    finally:
-        glove.pg = default_pg
