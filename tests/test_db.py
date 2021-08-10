@@ -56,6 +56,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
 
     assert caplog.messages == [
         'database successfully setup ✓',
+        'migrations table created',
         'checking 1 migration patches...',
         '------------- running run_full_name --------------',
         'run_sql_section running section "full_name"',
