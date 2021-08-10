@@ -16,8 +16,9 @@ logger = logging.getLogger('foxglove.db.migrations')
 __all__ = ('run_migrations',)
 
 
-migrations_table = """
-create table if not exists migrations (
+migrations_table_name = 'migrations'
+migrations_table_sql = f"""
+create table if not exists {migrations_table_name} (
   id serial primary key,
   ts timestamptz not null default current_timestamp,
   ref varchar(255) not null,
@@ -42,7 +43,9 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
         tr = conn.transaction()
         await tr.start()
 
-        await conn.execute(migrations_table)
+        if not await conn.fetchval('select 1 from pg_tables where tablename=$1', migrations_table_name):
+            await conn.execute(migrations_table_sql)
+
         try:
             await conn.execute('lock table migrations nowait')
         except LockNotAvailableError:
