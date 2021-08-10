@@ -79,6 +79,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
             assert await run_migrations(settings, patches, True) == 0
 
     assert caplog.messages == [
+        'migrations table created',
         'checking 1 migration patches...',
         '------------ running ok_patch:foobar -------------',
         'running ok_patch',
@@ -106,6 +107,7 @@ async def test_run_migrations_error(settings: BaseSettings, wipe_db, caplog):
         assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is False
 
     assert caplog.messages == [
+        'migrations table created',
         'checking 2 migration patches...',
         '---------------- running ok_patch ----------------',
         'result: hello',
@@ -140,6 +142,7 @@ async def test_run_migrations_not_live(settings: BaseSettings, wipe_db, db_conn,
         assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is False
 
     assert caplog.messages == [
+        'migrations table created',
         'checking 1 migration patches...',
         '---------------- running ok_patch ----------------',
         'running ok_patch',

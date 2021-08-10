@@ -45,6 +45,7 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
 
         if not await conn.fetchval('select 1 from pg_tables where tablename=$1', migrations_table_name):
             await conn.execute(migrations_table_sql)
+            logger.info('%s table created', migrations_table_name)
 
         try:
             await conn.execute(f'lock table {migrations_table_name} nowait')
