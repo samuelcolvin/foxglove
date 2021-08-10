@@ -1,5 +1,6 @@
 import asyncio
 import os
+from typing import Literal
 
 import arq
 import httpx
@@ -19,10 +20,14 @@ class Glove:
     pg: BuildPgPool
     redis: arq.ArqRedis
 
-    async def startup(self, *, run_migrations: bool = True) -> None:
+    async def startup(self, *, run_migrations: Literal[True, False, 'unless-test-mode'] = 'unless-test-mode') -> None:
         from .logs import setup_sentry
 
         setup_sentry()
+
+        if run_migrations == 'unless-test-mode':
+            run_migrations = not self.settings.test_mode
+
         if not hasattr(self, 'pg'):
             self.pg = await create_pg_pool(self.settings, run_migrations=run_migrations)
         if not hasattr(self, 'redis') and self.settings.redis_settings:
