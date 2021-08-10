@@ -63,7 +63,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
         '1 migration patches run, 0 already up to date ✓',
         'database already exists ✓',
         'checking 1 migration patches...',
-        '0 migration patches run, 1 already up to date ✓',
+        'all 1 migrations already up to date ✓',
     ]
     alt_settings.pg_migrations = False
 

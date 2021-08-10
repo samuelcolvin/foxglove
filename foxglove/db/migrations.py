@@ -47,9 +47,9 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
             await conn.execute(migrations_table_sql)
 
         try:
-            await conn.execute('lock table migrations nowait')
+            await conn.execute(f'lock table {migrations_table_name} nowait')
         except LockNotAvailableError:
-            logger.debug('another transaction has locked migrations, skipping migrations here')
+            logger.debug('another transaction has locked %s, skipping migrations here', migrations_table_name)
             await tr.rollback()
             return 0
 
@@ -61,15 +61,15 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
                 content = get_sql_section(patch.auto_sql_section, settings.sql)
                 sql_section = f'{patch.auto_sql_section}::\n{content}'
             else:
-                # '-' is required to make the unique constraint work since null would mean rows won't conflict
+                # '-' is required to make the unique constraint work since null would mean rows wouldn't conflict
                 sql_section = '-'
 
             patch_ref = patch.func.__name__
             if isinstance(patch.auto_run, str):
                 patch_ref += f':{patch.auto_run}'
             migration_id = await conn.fetchval(
-                """
-                insert into migrations (ref, sql_section)
+                f"""
+                insert into {migrations_table_name} (ref, sql_section)
                 values ($1, $2)
                 on conflict (ref, sql_section) do nothing
                 returning id
@@ -93,7 +93,10 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
         glove.pg = default_pg
         if live:
             await tr.commit()
-            logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
+            if count == 0:
+                logger.info('all %d migrations already up to date ✓', up_to_date)
+            else:
+                logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
         else:
             await tr.rollback()
             logger.info('%d migration patches run, %d already up to date, not live rolling back', count, up_to_date)
@@ -102,7 +105,7 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
 
 
 async def run_patch(conn: BuildPgConnection, patch: Patch, ref: str, live: bool) -> bool:
-    kwargs = dict(conn=conn, live=live, args={'__auto_migrations__': 'true'}, logger=logger)
+    kwargs = dict(conn=conn, live=live, args={'__migration__': 'true'}, logger=logger)
     logger.info('{:-^50}'.format(f' running {ref} '))
     try:
         if asyncio.iscoroutinefunction(patch.func):
