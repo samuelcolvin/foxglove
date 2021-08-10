@@ -85,7 +85,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
         '----------- ok_patch:foobar succeeded ------------',
         '1 migration patches run, 0 already up to date ✓',
         'checking 1 migration patches...',
-        '0 migration patches run, 1 already up to date ✓',
+        'all 1 migrations already up to date ✓',
         'another transaction has locked migrations, skipping migrations here',
     ]
 
