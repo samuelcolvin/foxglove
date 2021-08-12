@@ -115,7 +115,7 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
 
 async def run_patch(conn: BuildPgConnection, patch: Patch, ref: str, live: bool) -> bool:
     kwargs = dict(conn=conn, live=live, args={'__migration__': 'true'}, logger=logger)
-    logger.info('{:-^50}'.format(f' running {ref} '))
+    logger.info('{:-^50}'.format(f' {ref} ... '))
     try:
         if asyncio.iscoroutinefunction(patch.func):
             result = await patch.func(**kwargs)
@@ -128,5 +128,5 @@ async def run_patch(conn: BuildPgConnection, patch: Patch, ref: str, live: bool)
         logger.exception('Error running %s migration patch', patch.func.__name__)
         return False
     else:
-        logger.info('{:-^50}'.format(f' {ref} succeeded '))
+        logger.info('{:-^50}'.format(f' {ref} ✓ '))
         return True

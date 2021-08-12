@@ -82,9 +82,9 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
     assert caplog.messages == [
         'migrations table created',
         'checking 1 migration patches...',
-        '------------ running ok_patch:foobar -------------',
+        '-------------- ok_patch:foobar ... ---------------',
         'running ok_patch',
-        '----------- ok_patch:foobar succeeded ------------',
+        '--------------- ok_patch:foobar ✓ ----------------',
         '1 migration patches run, 0 already up to date ✓',
         'checking 1 migration patches...',
         'all 1 migrations already up to date ✓',
@@ -110,10 +110,10 @@ async def test_run_migrations_error(settings: BaseSettings, wipe_db, caplog):
     assert caplog.messages == [
         'migrations table created',
         'checking 2 migration patches...',
-        '---------------- running ok_patch ----------------',
+        '------------------ ok_patch ... ------------------',
         'result: hello',
-        '--------------- ok_patch succeeded ---------------',
-        '-------------- running error_patch ---------------',
+        '------------------- ok_patch ✓ -------------------',
+        '---------------- error_patch ... -----------------',
         '--------------- error_patch failed ---------------',
         'Error running error_patch migration patch',
         'patch failed, rolling back all 1 migration patches in this session',
@@ -145,9 +145,9 @@ async def test_run_migrations_not_live(settings: BaseSettings, wipe_db, db_conn,
     assert caplog.messages == [
         'migrations table created',
         'checking 1 migration patches...',
-        '---------------- running ok_patch ----------------',
+        '------------------ ok_patch ... ------------------',
         'running ok_patch',
-        '--------------- ok_patch succeeded ---------------',
+        '------------------- ok_patch ✓ -------------------',
         '1 migration patches run, 0 already up to date, not live rolling back',
     ]
 
