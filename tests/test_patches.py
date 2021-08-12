@@ -67,6 +67,7 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
         'ref': 'ok_patch:foobar',
         'sql_section': '-',
         'ts': CloseToNow(),
+        'fake': False,
     }
     assert await run_migrations(settings, patches, True) == 0
 
@@ -148,4 +149,34 @@ async def test_run_migrations_not_live(settings: BaseSettings, wipe_db, db_conn,
         'running ok_patch',
         '--------------- ok_patch succeeded ---------------',
         '1 migration patches run, 0 already up to date, not live rolling back',
+    ]
+
+
+async def test_run_migrations_fake(settings: BaseSettings, wipe_db, db_conn, caplog):
+    async def ok_patch(logger, **kwargs):
+        raise RuntimeError('should not happen')
+
+    patches = [Patch(ok_patch, auto_run=True)]
+
+    caplog.set_level(logging.DEBUG, 'foxglove.db')
+    assert await run_migrations(settings, patches, True, fake=True) == 1
+
+    async with AsyncPgContext(settings.pg_dsn) as conn:
+        assert await conn.fetchval("select exists (select from pg_tables where tablename='migrations')") is True
+        assert await conn.fetchval('select count(*) from migrations') == 1
+        migrations = dict(await conn.fetchrow('select * from migrations'))
+
+    assert migrations == {
+        'id': AnyInt(),
+        'ref': 'ok_patch',
+        'sql_section': '-',
+        'ts': CloseToNow(),
+        'fake': True,
+    }
+
+    assert caplog.messages == [
+        'migrations table created',
+        'checking 1 migration patches...',
+        'faked migration ok_patch',
+        '1 migration patches faked, 0 already up to date ✓',
     ]

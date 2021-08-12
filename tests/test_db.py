@@ -30,10 +30,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
         is True
     )
 
-    with caplog.at_level(
-        logging.INFO,
-        'foxglove',
-    ):
+    with caplog.at_level(logging.INFO, 'foxglove'):
         assert await prepare_database(alt_settings, False) is False
 
     async with AsyncPgContext(alt_settings.pg_dsn) as conn:
@@ -52,6 +49,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
             '$$ language plpgsql;'
         ),
         'ts': CloseToNow(),
+        'fake': False,
     }
 
     assert caplog.messages == [

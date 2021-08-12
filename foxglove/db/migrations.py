@@ -23,12 +23,13 @@ create table if not exists {migrations_table_name} (
   ts timestamptz not null default current_timestamp,
   ref varchar(255) not null,
   sql_section text not null,
+  fake boolean not null,
   unique (ref, sql_section)
 );
 """
 
 
-async def run_migrations(settings: BaseSettings, patches: List[Patch], live: bool) -> int:
+async def run_migrations(settings: BaseSettings, patches: List[Patch], live: bool, *, fake: bool = False) -> int:
     """
     Migrations in foxglove are handled by patches which are run automatically if
     foxglove spots they haven't been run before
@@ -70,37 +71,44 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
                 patch_ref += f':{patch.auto_run}'
             migration_id = await conn.fetchval(
                 f"""
-                insert into {migrations_table_name} (ref, sql_section)
-                values ($1, $2)
+                insert into {migrations_table_name} (ref, sql_section, fake)
+                values ($1, $2, $3)
                 on conflict (ref, sql_section) do nothing
                 returning id
                 """,
                 patch_ref,
                 sql_section,
+                fake,
             )
             if migration_id is None:
                 up_to_date += 1
                 continue
 
-            successful = await run_patch(conn, patch, patch_ref, live)
-            if not successful:
-                logger.warning('patch failed, rolling back all %d migration patches in this session', count)
-                await tr.rollback()
-                glove.pg = default_pg
-                return 0
+            if fake:
+                logger.warning('faked migration %s', patch_ref)
+            else:
+                successful = await run_patch(conn, patch, patch_ref, live)
+                if not successful:
+                    logger.warning('patch failed, rolling back all %d migration patches in this session', count)
+                    await tr.rollback()
+                    glove.pg = default_pg
+                    return 0
 
             count += 1
 
         glove.pg = default_pg
+        verb = 'faked' if fake else 'run'
         if live:
             await tr.commit()
             if count == 0:
                 logger.info('all %d migrations already up to date ✓', up_to_date)
             else:
-                logger.info('%d migration patches run, %d already up to date ✓', count, up_to_date)
+                logger.info('%d migration patches %s, %d already up to date ✓', count, verb, up_to_date)
         else:
             await tr.rollback()
-            logger.info('%d migration patches run, %d already up to date, not live rolling back', count, up_to_date)
+            logger.info(
+                '%d migration patches %s, %d already up to date, not live rolling back', count, verb, up_to_date
+            )
 
     return count
 

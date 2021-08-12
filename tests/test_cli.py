@@ -107,5 +107,12 @@ def test_reset_database(mocker):
 def test_run_migrations(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.db.migrations.run_migrations')
     result = runner.invoke(cli, ['-s', 'demo.settings', 'migrations'])
-    assert 'running migrations...' in result.output
+    assert 'running migrations live=False fake=False...' in result.output
+    assert mock_uvicorn_run.call_count == 1
+
+
+def test_run_migrations_fake(mocker):
+    mock_uvicorn_run = mocker.patch('foxglove.db.migrations.run_migrations')
+    result = runner.invoke(cli, ['-s', 'demo.settings', 'migrations', '--live', '--fake'])
+    assert 'running migrations live=True fake=True...' in result.output
     assert mock_uvicorn_run.call_count == 1
