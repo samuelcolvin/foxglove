@@ -105,5 +105,5 @@ def reset_database(settings: BaseSettings):
         logger.info('cancelling')
     else:
         logger.info('resetting database...')
-        asyncio.run(prepare_database(settings, True))
+        asyncio.run(prepare_database(settings, True, run_migrations=False))
         logger.info('done.')
