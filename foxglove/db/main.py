@@ -28,7 +28,7 @@ async def prepare_database(settings: BaseSettings, overwrite_existing: bool, *, 
 
         patches = import_patches(settings)
 
-        await run_migrations_(settings, patches, True)
+        await run_migrations_(settings, patches, True, fake=db_created)
     return db_created
 
 
@@ -105,5 +105,5 @@ def reset_database(settings: BaseSettings):
         logger.info('cancelling')
     else:
         logger.info('resetting database...')
-        asyncio.run(prepare_database(settings, True, run_migrations=False))
+        asyncio.run(prepare_database(settings, True))
         logger.info('done.')
