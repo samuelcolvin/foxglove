@@ -85,7 +85,7 @@ async def run_migrations(settings: BaseSettings, patches: List[Patch], live: boo
                 continue
 
             if fake:
-                logger.warning('faked migration %s', patch_ref)
+                logger.info('faked migration %s', patch_ref)
             else:
                 successful = await run_patch(conn, patch, patch_ref, live)
                 if not successful:

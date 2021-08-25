@@ -17,6 +17,7 @@ async def create_pg_pool(settings: BaseSettings, *, run_migrations: bool = True)
         settings.pg_dsn,
         min_size=settings.pg_pool_min_size,
         max_size=settings.pg_pool_max_size,
+        server_settings=settings.pg_server_settings,
     )
 
 
