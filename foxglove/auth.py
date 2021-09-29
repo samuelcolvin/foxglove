@@ -11,13 +11,14 @@ from pydantic import SecretBytes
 
 from . import glove
 from .exceptions import HttpTooManyRequests, UnexpectedResponse, manual_response_error
+from .utils import get_ip
 
 __all__ = 'rate_limit', 'check_password_breached', 'check_password_correct', 'hash_password'
 
 
 def rate_limit(*, request_limit: Optional[int], interval: int):
     async def check_rate_limit(request: Request) -> int:
-        cache_key = f'rate-limit:{request.method}{request.url.path}:{time() // interval:0.0f}'
+        cache_key = f'rate-limit:{request.method}{request.url.path}:{get_ip(request)}:{time() // interval:0.0f}'
         with await glove.redis as conn:
             pipe = conn.pipeline()
             pipe.unwatch()
