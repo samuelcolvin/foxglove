@@ -86,6 +86,20 @@ async def test_cloudflare_bad2(create_request, glove):
     assert repr(m.ip_ranges[0]) == 'IPRangeCounter(173.245.48.0/20, 0)'
 
 
+async def test_cloudflare_single_ip(create_request, glove):
+    req: Request = create_request(headers={'x-forwarded-for': '1.1.1.1'})
+    m = CloudflareCheckMiddleware(create_request.app)
+
+    assert m.ip_ranges is None
+
+    r = await m.dispatch(req, next_function)
+    assert r.status_code == 400, r.body
+    assert r.body.startswith(b'Request incorrectly routed, this looks like')
+
+    assert isinstance(m.ip_ranges, list)
+    assert len(m.ip_ranges) == 22
+
+
 async def test_cloudflare_multiple(create_request, glove, mocker):
     get_cloudflare_ips_spy = mocker.spy(foxglove.middleware, 'get_cloudflare_ips')
 

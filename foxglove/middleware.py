@@ -307,7 +307,7 @@ class CloudflareCheckMiddleware(BaseHTTPMiddleware):
         ip = None
         x_forwarded_for = request.headers.get('x-forwarded-for')
         if x_forwarded_for:
-            ip = x_forwarded_for.rsplit(',', 1)[1].strip()
+            ip = x_forwarded_for.rsplit(',', 1)[-1].strip()
         else:
             client = request.scope.get('client')
             if client:
