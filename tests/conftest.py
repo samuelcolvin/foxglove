@@ -76,7 +76,7 @@ async def fix_db_conn(settings, clean_db):
 
 
 @pytest.fixture(name='glove')
-async def fix_glove(db_conn, loop):
+async def fix_glove(db_conn, loop, settings):
     glove.pg = db_conn
 
     await glove.startup()
