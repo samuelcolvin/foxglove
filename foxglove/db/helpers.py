@@ -1,5 +1,6 @@
 import asyncio
-from typing import Optional
+from functools import wraps
+from typing import Callable, Optional
 
 from buildpg.asyncpg import BuildPgConnection
 
@@ -17,64 +18,46 @@ class TimedLock(asyncio.Lock):
 
 
 class _LockedExecute:
-    def __init__(self, conn: BuildPgConnection, lock: Optional[TimedLock] = None):
+    def __init__(
+        self, conn: BuildPgConnection, lock: Optional[TimedLock] = None, transaction_lock: Optional[TimedLock] = None
+    ):
         self._conn: BuildPgConnection = conn
         # could also add lock to each method of the returned connection
         self._lock: TimedLock = lock or TimedLock()
+        self._transaction_lock: TimedLock = transaction_lock or TimedLock()
 
-    async def execute(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.execute(*args, **kwargs)
+    def __getattr__(self, item):
+        f = getattr(self._conn, item)
 
-    async def execute_b(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.execute_b(*args, **kwargs)
+        @wraps(f)
+        async def wrapped_function(*args, **kwargs):
+            async with self._lock:
+                return await f(*args, **kwargs)
 
-    async def fetch(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.fetch(*args, **kwargs)
-
-    async def fetch_b(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.fetch_b(*args, **kwargs)
-
-    async def fetchval(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.fetchval(*args, **kwargs)
-
-    async def fetchval_b(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.fetchval_b(*args, **kwargs)
-
-    async def fetchrow(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.fetchrow(*args, **kwargs)
-
-    async def fetchrow_b(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.fetchrow_b(*args, **kwargs)
-
-    async def executemany(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.executemany(*args, **kwargs)
-
-    async def executemany_b(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.executemany_b(*args, **kwargs)
-
-    async def copy_from_query(self, *args, **kwargs):
-        async with self._lock:
-            return await self._conn.copy_from_query(*args, **kwargs)
+        return wrapped_function
 
 
-class DummyPgTransaction(_LockedExecute):
-    _tr = None
+class DummyPgTransaction:
+    def __init__(
+        self,
+        conn: BuildPgConnection,
+        lock: TimedLock,
+        transaction_lock: TimedLock,
+        set_lock: Callable[[TimedLock], None],
+    ):
+        self._conn: BuildPgConnection = conn
+        self._lock: TimedLock = lock
+        self._transaction_lock: TimedLock = transaction_lock
+        self._set_lock = set_lock
 
     async def __aenter__(self):
+        await self._transaction_lock.acquire()
         async with self._lock:
             self._tr = self._conn.transaction()
             await self._tr.start()
-        return self
+            # set a new transaction lock on the connection while it's "in this transaction" so nested transactions
+            # still work
+            self._set_lock(TimedLock(timeout=self._transaction_lock.timeout))
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         async with self._lock:
@@ -83,23 +66,30 @@ class DummyPgTransaction(_LockedExecute):
             else:
                 await self._tr.commit()
             self._tr = None
+            # put the transaction lock back so multiple transactions can't be run at the same time
+            self._set_lock(self._transaction_lock)
+            self._transaction_lock.release()
 
 
 class DummyPgConn(_LockedExecute):
+    def _set_transaction_lock(self, lock: TimedLock):
+        self._transaction_lock = lock
+
     def transaction(self):
-        return DummyPgTransaction(self._conn, self._lock)
+        return DummyPgTransaction(self._conn, self._lock, self._transaction_lock, set_lock=self._set_transaction_lock)
 
     def __repr__(self) -> str:
         return f'<DummyPgConn {self._conn._addr} {self._conn._params}>'
 
 
 class _ConnAcquire:
-    def __init__(self, conn: BuildPgConnection, lock: TimedLock):
+    def __init__(self, conn: BuildPgConnection, lock: TimedLock, transaction_lock: TimedLock):
         self._conn = conn
         self._lock = lock
+        self._transaction_lock = transaction_lock
 
     async def __aenter__(self) -> DummyPgConn:
-        return DummyPgConn(self._conn, self._lock)
+        return DummyPgConn(self._conn, self._lock, self._transaction_lock)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -118,7 +108,7 @@ class DummyPgPool(_LockedExecute):
     """
 
     def acquire(self):
-        return _ConnAcquire(self._conn, self._lock)
+        return _ConnAcquire(self._conn, self._lock, self._transaction_lock)
 
     async def close(self):
         pass
