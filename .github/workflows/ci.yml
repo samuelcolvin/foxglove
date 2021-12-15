@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9']
+        python-version: ['3.8', '3.9.6']
 
     services:
       postgres:
@@ -34,7 +34,6 @@ jobs:
 
     env:
       PGPASSWORD: postgres
-      REDIS_URL: 'redis://redis:6379'
       PYTHON: ${{ matrix.python-version }}
 
     steps:
