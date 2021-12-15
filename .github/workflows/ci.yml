@@ -34,6 +34,7 @@ jobs:
 
     env:
       PGPASSWORD: postgres
+      REDIS_URL: 'redis://redis:6379'
       PYTHON: ${{ matrix.python-version }}
 
     steps:
