@@ -58,7 +58,8 @@ class DummyPgTransaction:
             await self._tr.start()
             # set a new transaction lock on the connection while it's "in this transaction" so nested transactions
             # still work
-            self._set_lock(TimedLock(timeout=self._transaction_lock.timeout))
+            lock = self._transaction_lock
+            self._set_lock(TimedLock(lock.name, timeout=lock.timeout))
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         async with self._lock:
