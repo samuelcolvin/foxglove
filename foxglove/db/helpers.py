@@ -24,7 +24,7 @@ class _LockedExecute:
         self._conn: BuildPgConnection = conn
         # could also add lock to each method of the returned connection
         self._lock: TimedLock = lock or TimedLock()
-        self._transaction_lock: TimedLock = transaction_lock or TimedLock()
+        self._transaction_lock: TimedLock = transaction_lock or TimedLock(timeout=2)
 
     def __getattr__(self, item):
         f = getattr(self._conn, item)
@@ -95,7 +95,7 @@ class _ConnAcquire:
         pass
 
     async def _get_conn(self) -> DummyPgConn:
-        return DummyPgConn(self._conn, self._lock)
+        return DummyPgConn(self._conn, self._lock, self._transaction_lock)
 
     def __await__(self):
         return self._get_conn().__await__()
@@ -122,7 +122,7 @@ class DummyPgPool(_LockedExecute):
 
         **THIS IS OBVIOUSLY ONLY TO BE USED IN TESTS**
         """
-        return DummyPgConn(self._conn, self._lock)
+        return DummyPgConn(self._conn, self._lock, self._transaction_lock)
 
     def __repr__(self) -> str:
         return f'<DummyPgPool {self._conn._addr} {self._conn._params}>'
