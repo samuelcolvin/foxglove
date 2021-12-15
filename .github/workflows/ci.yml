@@ -34,6 +34,7 @@ jobs:
 
     env:
       PGPASSWORD: postgres
+      PYTHON: ${{ matrix.python-version }}
 
     steps:
     - uses: actions/checkout@v2
@@ -48,14 +49,13 @@ jobs:
         make install
         pip freeze
 
-    - name: test
-      run: |
-        make test
-        coverage xml
+    - run: pytest --cov=foxglove -vv
+    - run: coverage xml
 
     - uses: codecov/codecov-action@v1.0.13
       with:
         file: ./coverage.xml
+        env_vars: PYTHON
 
   lint:
     runs-on: ubuntu-latest
