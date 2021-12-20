@@ -2,6 +2,7 @@ import logging
 import logging.config
 import os
 import traceback
+from copy import copy
 from functools import lru_cache
 from io import StringIO
 from typing import Any, Dict
@@ -67,9 +68,11 @@ class HighlightExtraFormatter(DefaultFormatter):
         super().__init__(*args, **kwargs)
 
     def formatMessage(self, record):
-        s = super().formatMessage(record)
+        record_copy = copy(record)
+        record_copy.__dict__['nameprefix'] = f'{record_copy.name:28}'
+        s = super().formatMessage(record_copy)
         if not self.sentry_active:
-            extra = {k: v for k, v in record.__dict__.items() if k not in standard_record_keys}
+            extra = {k: v for k, v in record_copy.__dict__.items() if k not in standard_record_keys}
             if extra:
                 s += '\nExtra: ' + format_extra(extra, highlight=self.should_use_colors())
         return s
@@ -131,12 +134,12 @@ def build_logging_config() -> Dict[str, Any]:
         'formatters': {
             'foxglove.default': {
                 '()': 'foxglove.logs.HighlightExtraFormatter',
-                'fmt': '%(levelprefix)s %(message)s',
+                'fmt': '%(nameprefix)s%(levelprefix)s %(message)s',
                 'use_colors': None,
             },
             'foxglove.access': {
                 '()': 'uvicorn.logging.AccessFormatter',
-                'fmt': "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
+                'fmt': "%(nameprefix)s%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
             },
         },
         'handlers': {
