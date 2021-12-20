@@ -72,7 +72,7 @@ class HighlightExtraFormatter(DefaultFormatter):
         record_copy.__dict__['nameprefix'] = f'{record_copy.name:28}'
         s = super().formatMessage(record_copy)
         if not self.sentry_active:
-            extra = {k: v for k, v in record_copy.__dict__.items() if k not in standard_record_keys}
+            extra = {k: v for k, v in record.__dict__.items() if k not in standard_record_keys}
             if extra:
                 s += '\nExtra: ' + format_extra(extra, highlight=self.should_use_colors())
         return s
