@@ -139,7 +139,7 @@ def build_logging_config() -> Dict[str, Any]:
             },
             'foxglove.access': {
                 '()': 'uvicorn.logging.AccessFormatter',
-                'fmt': "%(nameprefix)s%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
+                'fmt': "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
             },
         },
         'handlers': {

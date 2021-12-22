@@ -71,6 +71,7 @@ class ErrorMiddleware(BaseHTTPMiddleware):
     async def log(
         self, request: Request, *, exc: Optional[Exception] = None, response: Optional[Response] = None
     ) -> None:
+        debug(request, exc, response)
         event_data = await request_log_extra(request, exc, response)
         event_data['user'] = await self.user_info(request)
         view_ref = event_data['transaction']
