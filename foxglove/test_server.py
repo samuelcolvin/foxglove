@@ -125,7 +125,7 @@ class Offline:
 
         resolver = aiodns.DNSResolver()
         try:
-            with timeout(1):
+            async with timeout(1):
                 await resolver.query('google.com', 'A')
         except (aiodns.error.DNSError, asyncio.TimeoutError) as e:
             print(f'\nnot online: {e.__class__.__name__} {e}\n', file=sys.stderr)
