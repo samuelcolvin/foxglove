@@ -46,15 +46,6 @@ def test_errors_raise_unexpected(client: Client, caplog):
     assert r.extra['response_body'] == {'message': 'raised HttpBadRequest'}
 
 
-@pytest.mark.xfail(reason='error raising has changed in starlette v0.15.0')
-def test_errors_exception(client: Client, caplog):
-    r = client.get('/error/', params={'error': 'RuntimeError'})
-    assert r.status_code == 500, r.text
-    assert len(caplog.records) == 1, caplog.text
-    assert '"GET /error/?error=RuntimeError", RuntimeError(' in caplog.text
-    assert caplog.records[0].request['url'] == 'http://testserver/error/?error=RuntimeError'
-
-
 def test_errors_request_return_unexpected(client: Client, caplog, mocker):
     m = mocker.patch('foxglove.middleware.capture_event')
     assert client.get_json('/error/', params={'error': 'return'}, status=400) == {'error': 'return'}
@@ -81,7 +72,16 @@ def test_errors_expected_sentry(client_sentry: Client, caplog, mocker):
     assert m.call_args.args[1] is None
 
 
-@pytest.mark.xfail(reason='error raising has changed in starlette v0.15.0')
+@pytest.mark.xfail(strict=True, reason='waiting for fastAPI to upgrade to starlette v0.17.1')
+def test_errors_exception(client: Client, caplog):
+    r = client.get('/error/', params={'error': 'RuntimeError'})
+    assert r.status_code == 500, r.text
+    assert len(caplog.records) == 1, caplog.text
+    assert '"GET /error/?error=RuntimeError", RuntimeError(' in caplog.text
+    assert caplog.records[0].request['url'] == 'http://testserver/error/?error=RuntimeError'
+
+
+@pytest.mark.xfail(strict=True, reason='waiting for fastAPI to upgrade to starlette v0.17.1')
 def test_errors_exception_sentry(client_sentry: Client, caplog, mocker):
     m = mocker.patch('foxglove.middleware.capture_event')
     r = client_sentry.get('/error/', params={'error': 'RuntimeError'})
