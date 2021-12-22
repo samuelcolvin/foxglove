@@ -4,7 +4,7 @@ from pytest_toolbox.comparison import RegexStr
 
 from foxglove.auth import bcrypt as auth_bcrypt, check_password_breached, check_password_correct, hash_password
 from foxglove.exceptions import HttpUnprocessableEntity
-from foxglove.testing import Client
+from foxglove.testing import TestClient as Client
 
 pytestmark = pytest.mark.asyncio
 

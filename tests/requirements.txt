@@ -8,5 +8,4 @@ pytest-mock==3.6.1
 pytest-sugar==0.9.4
 pytest-timeout==2.0.2
 pytest-toolbox==0.4
-starlette==0.15
-uvloop==0.15.3
+uvloop==0.16.0

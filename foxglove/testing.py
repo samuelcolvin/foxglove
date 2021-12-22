@@ -2,14 +2,14 @@ import asyncio
 import http
 import inspect
 import io
-import queue
 import json
+import queue
 import threading
 import types
-from typing import Any, Dict, Optional, Union, MutableMapping, Tuple, IO, Callable, Awaitable, Sequence, List, cast
+from typing import IO, Any, Awaitable, Callable, Dict, List, MutableMapping, Optional, Sequence, Tuple, Union, cast
 from urllib.parse import unquote, urljoin, urlsplit
 
-from requests import Response, PreparedRequest
+from requests import PreparedRequest, Response
 from requests.adapters import HTTPAdapter
 from requests.auth import AuthBase
 from requests.cookies import RequestsCookieJar
@@ -106,7 +106,7 @@ class _ASGIAdapter(HTTPAdapter):
         self.raise_server_exceptions = raise_server_exceptions
         self.root_path = root_path
 
-    def send(self, request: PreparedRequest, *args: Any, **kwargs: Any) -> Response:
+    def send(self, request: PreparedRequest, *args: Any, **kwargs: Any) -> Response:  # noqa: C901
         scheme, netloc, path, query, fragment = (str(item) for item in urlsplit(request.url))
 
         default_port = {'http': 80, 'ws': 80, 'https': 443, 'wss': 443}[scheme]
@@ -387,6 +387,7 @@ class TestClient(requests.Session):
         self.headers.update({'user-agent': 'testclient'})
         self.app = asgi_app
         self.base_url = base_url
+        self.last_response: Optional[Response] = None
 
     def request(  # type: ignore
         self,
@@ -408,7 +409,7 @@ class TestClient(requests.Session):
         json: Any = None,
     ) -> Response:
         url = urljoin(self.base_url, url)
-        return super().request(
+        self.last_response = r = super().request(
             method,
             url,
             params=params,
@@ -426,10 +427,9 @@ class TestClient(requests.Session):
             cert=cert,
             json=json,
         )
+        return r
 
-    def websocket_connect(
-        self, url: str, subprotocols: Sequence[str] = None, **kwargs: Any
-    ) -> Any:
+    def websocket_connect(self, url: str, subprotocols: Sequence[str] = None, **kwargs: Any) -> Any:
         url = urljoin('ws://testserver', url)
         headers = kwargs.get('headers', {})
         headers.setdefault('connection', 'upgrade')

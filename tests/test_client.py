@@ -1,18 +1,18 @@
 import pytest
 
-from foxglove.testing import Client
+from foxglove.testing import TestClient as Client
 
 
 def test_index(client: Client):
-    assert client.last_request is None
+    assert client.last_response is None
     assert client.get_json('/') == {'app': 'foxglove-demo'}
-    assert client.last_request.status_code == 200
+    assert client.last_response.status_code == 200
 
 
 def test_post_index(client: Client):
     client.get_json('/')
     assert client.post_json('/', status=None)
-    assert client.last_request.status_code == 405
+    assert client.last_response.status_code == 405
 
 
 def test_request_error(client: Client, mocker):

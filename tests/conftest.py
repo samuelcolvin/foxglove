@@ -11,7 +11,7 @@ from foxglove import glove
 from foxglove.db import lenient_conn, prepare_database
 from foxglove.db.helpers import DummyPgPool, SyncDb
 from foxglove.test_server import create_dummy_server
-from foxglove.testing import Client
+from foxglove.testing import TestClient
 
 commit_transactions = 'KEEP_DB' in os.environ
 
@@ -122,7 +122,7 @@ class SyncConnContext:
 @pytest.fixture(name='client')
 def fix_client(settings: Settings, db_conn, glove):
     app = settings.create_app()
-    with Client(app) as client:
+    with TestClient(app) as client:
         yield client
 
 
@@ -131,7 +131,7 @@ def fix_client_sentry(settings: Settings, db_conn, glove):
     settings.sentry_dsn = 'https://123@example.com/789'
     glove._settings = settings
     app = settings.create_app()
-    with Client(app) as client:
+    with TestClient(app) as client:
         yield client
 
 
