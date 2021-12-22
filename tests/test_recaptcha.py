@@ -71,22 +71,22 @@ def test_settings_origin(client: Client, settings, dummy_server: DummyServer, ca
         settings.origin = None
 
 
-async def test_direct_ok(create_request, settings, dummy_server: DummyServer):
+async def test_direct_ok(create_request, settings, glove, dummy_server: DummyServer):
     settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     await check_recaptcha(create_request(), '__ok__')
 
 
-async def test_direct_request_origin(create_request, settings, dummy_server: DummyServer):
+async def test_direct_request_origin(create_request, settings, glove, dummy_server: DummyServer):
     settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     await check_recaptcha(create_request(headers={'origin': 'https://foo.com'}), '__ok__ host:foo.com')
 
 
-async def test_direct_wrong_host(create_request, settings, dummy_server: DummyServer):
+async def test_direct_wrong_host(create_request, settings, glove, dummy_server: DummyServer):
     settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     with pytest.raises(exceptions.HttpBadRequest):
         await check_recaptcha(create_request(), '__ok__ host:foobar.com')
 
 
-async def test_allowed_hosts(create_request, settings, dummy_server: DummyServer):
+async def test_allowed_hosts(create_request, settings, glove, dummy_server: DummyServer):
     settings.recaptcha_url = f'{dummy_server.server_name}/recaptcha_url/'
     await check_recaptcha(create_request(), '__ok__ host:foobar.com', allowed_hosts={'foobar.com'})
