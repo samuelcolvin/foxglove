@@ -133,6 +133,7 @@ def fix_client_sentry(settings: Settings, db_conn, glove):
     app = settings.create_app()
     with TestClient(app) as client:
         yield client
+    settings.sentry_dsn = None
 
 
 @pytest.fixture(name='dummy_server')
