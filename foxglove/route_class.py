@@ -30,7 +30,7 @@ class SafeRequest(Request):
 
         The error here is caught by foxglove.routing.get_request_handler
         """
-        if not hasattr(self, "_json"):
+        if not hasattr(self, '_json'):
             body = await self.body()
             if b'\\u0000' in body:
                 raise ValueError('Invalid JSON body containing null bytes')
