@@ -14,7 +14,7 @@ from foxglove.db import PgMiddleware
 from foxglove.db.middleware import get_db
 from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
 from foxglove.recaptcha import RecaptchaDepends
-from foxglove.route_class import KeepBodyAPIRoute
+from foxglove.route_class import SafeAPIRoute
 
 logger = logging.getLogger('main')
 
@@ -52,7 +52,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url='/docs',
 )
-app.router.route_class = KeepBodyAPIRoute
+app.router.route_class = SafeAPIRoute
 
 
 @app.exception_handler(exceptions.HttpMessageError)
