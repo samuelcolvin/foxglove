@@ -1,9 +1,11 @@
+import json
+
 import pytest
 from starlette.requests import Request
 from starlette.responses import Response
 
 import foxglove.middleware
-from foxglove.middleware import CloudflareCheckMiddleware, HostRedirectMiddleware
+from foxglove.middleware import CloudflareCheckMiddleware, CsrfMiddleware, HostRedirectMiddleware
 from foxglove.testing import Client
 
 pytestmark = pytest.mark.asyncio
@@ -121,3 +123,31 @@ async def test_cloudflare_multiple(create_request, glove, mocker):
 def test_index(client: Client):
     assert client.post_json('/no-csrf/') is None
     assert client.last_request.status_code == 200
+
+
+@pytest.mark.parametrize(
+    'headers,result',
+    [
+        ({}, 'Missing Origin and Referrer headers'),
+        ({'referer': 'https://www.example.com/foo/bar'}, None),
+        ({'origin': 'https://www.example.com'}, None),
+        ({'referer': 'https://www.different.com/foo/bar'}, 'Incorrect Referrer header'),
+        ({'origin': 'https://www.example.com:8000'}, 'Incorrect Origin header'),
+        ({'origin': 'https://www.different.com'}, 'Incorrect Origin header'),
+        ({'origin': 'https://www.different.com', 'host': 'localhost:8000'}, None),
+    ],
+)
+async def test_csrf_header_check(create_request, headers, result):
+    m = CsrfMiddleware(create_request.app, enable_header_check=True, allows_origins={'https://www.example.com'})
+
+    req: Request = create_request(method='POST', headers=headers)
+    assert m.header_check(req) == result
+
+
+async def test_csrf_header_check_error(create_request):
+    m = CsrfMiddleware(create_request.app, enable_header_check=True, allows_origins={'https://www.example.com'})
+
+    req: Request = create_request(method='POST', session={'session_id': 'foobar'})
+    r = await m.dispatch(req, next_function)
+    assert r.status_code == 403, r.body
+    assert json.loads(r.body) == {'message': 'Permission Denied, Missing Origin and Referrer headers'}

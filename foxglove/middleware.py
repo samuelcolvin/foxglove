@@ -6,11 +6,12 @@ import secrets
 from ipaddress import ip_address, ip_network
 from operator import attrgetter
 from time import time
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Literal, Optional
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Literal, Optional, Set
 
 from sentry_sdk import capture_event
 from sentry_sdk.utils import event_from_exception, exc_info_from_error
 from starlette.applications import Starlette
+from starlette.datastructures import URL
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
@@ -226,6 +227,11 @@ no_cookie_response = """\
   "message": "Permission Denied, no session set, updates not permitted"
 }
 """
+header_error_response = """\
+{
+  "message": "Permission Denied, %s"
+}
+"""
 
 
 def get_session_id(request: Request) -> str:
@@ -244,9 +250,21 @@ class CsrfMiddleware(BaseHTTPMiddleware):
     This prevents CSRF especially if the cookie has same_site strict
     """
 
-    def __init__(self, app: Starlette, should_check: Callable[[Request], bool] = None):
+    def __init__(
+        self,
+        app: Starlette,
+        *,
+        should_check: Callable[[Request], bool] = None,
+        enable_header_check: bool = None,
+        allows_origins: Set[str] = None,
+    ):
         super().__init__(app)
         self.should_check = should_check
+        if enable_header_check is None:
+            self.enable_header_check = not (glove.settings.dev_mode or glove.settings.test_mode)
+        else:
+            self.enable_header_check = enable_header_check
+        self.allows_origins = glove.settings.origin if allows_origins is None else allows_origins
 
     async def dispatch(self, request: Request, call_next: CallNext) -> Response:
         if self.should_check and not self.should_check(request):
@@ -254,8 +272,11 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 
         session_id = request.session.get(session_id_key)
         benign_request = request.method in {'HEAD', 'GET', 'OPTIONS'}
-        if not benign_request and session_id is None:
-            return Response(no_cookie_response, media_type='application/json', status_code=403)
+        if not benign_request:
+            if session_id is None:
+                return Response(no_cookie_response, media_type='application/json', status_code=403)
+            if error := self.header_check(request):
+                return Response(header_error_response % error, media_type='application/json', status_code=403)
 
         response = await call_next(request)
 
@@ -263,6 +284,36 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         if benign_request and response.status_code == 200 and session_id is None:
             update_session_id(request)
         return response
+
+    def header_check(self, request: Request) -> Optional[str]:
+        """
+        Origin and Referrer checks for CSRF, see
+        https://cheatsheetseries.owasp.org/cheatsheets/
+        Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#verifying-origin-with-standard-headers
+        """
+        if not self.enable_header_check:
+            return
+
+        if request.url.hostname == 'localhost':
+            # avoid the faff of CSRF checks on localhost
+            return
+
+        # origin header is optional (e.g. is omitted from firefox uploads)
+        origin_ok = False
+        if origin := request.headers.get('origin'):
+            if origin not in self.allows_origins:
+                return 'Incorrect Origin header'
+            origin_ok = True
+
+        referrer_ok = False
+        if referrer := request.headers.get('referer'):
+            referrer_url = URL(referrer)
+            if f'{referrer_url.scheme}://{referrer_url.hostname}' not in self.allows_origins:
+                return 'Incorrect Referrer header'
+            referrer_ok = True
+
+        if not origin_ok and not referrer_ok:
+            return 'Missing Origin and Referrer headers'
 
 
 class HostRedirectMiddleware(BaseHTTPMiddleware):
