@@ -129,16 +129,23 @@ def test_index(client: Client):
     'headers,result',
     [
         ({}, 'Missing Origin and Referrer headers'),
+        ({'foo': '1234'}, 'Missing Origin and Referrer headers'),
         ({'referer': 'https://www.example.com/foo/bar'}, None),
+        ({'referer': 'http://www.example.org/foo/bar'}, None),
         ({'origin': 'https://www.example.com'}, None),
+        ({'origin': 'http://www.example.org'}, None),
         ({'referer': 'https://www.different.com/foo/bar'}, 'Incorrect Referrer header'),
         ({'origin': 'https://www.example.com:8000'}, 'Incorrect Origin header'),
         ({'origin': 'https://www.different.com'}, 'Incorrect Origin header'),
-        ({'origin': 'https://www.different.com', 'host': 'localhost:8000'}, None),
+        ({'origin': 'https://www.example.com', 'referer': 'https://www.example.com/foo/bar'}, None),
     ],
 )
 async def test_csrf_header_check(create_request, headers, result):
-    m = CsrfMiddleware(create_request.app, enable_header_check=True, allows_origins={'https://www.example.com'})
+    m = CsrfMiddleware(
+        create_request.app,
+        enable_header_check=True,
+        allows_origins={'https://www.example.com', 'http://www.example.org'},
+    )
 
     req: Request = create_request(method='POST', headers=headers)
     assert m.header_check(req) == result

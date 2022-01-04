@@ -294,10 +294,6 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         if not self.enable_header_check:
             return
 
-        if request.url.hostname == 'localhost':
-            # avoid the faff of CSRF checks on localhost
-            return
-
         # origin header is optional (e.g. is omitted from firefox uploads)
         origin_ok = False
         if origin := request.headers.get('origin'):
@@ -305,14 +301,11 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                 return 'Incorrect Origin header'
             origin_ok = True
 
-        referrer_ok = False
         if referrer := request.headers.get('referer'):
             referrer_url = URL(referrer)
             if f'{referrer_url.scheme}://{referrer_url.hostname}' not in self.allows_origins:
                 return 'Incorrect Referrer header'
-            referrer_ok = True
-
-        if not origin_ok and not referrer_ok:
+        elif not origin_ok:
             return 'Missing Origin and Referrer headers'
 
 
