@@ -48,9 +48,9 @@ async def check_password_breached(
     r = await glove.http.get(f'https://api.pwnedpasswords.com/range/{pw_hash[:5]}')
     UnexpectedResponse.check(r)
 
-    hash_suffix = pw_hash[5:].upper()
-    for line in filter(None, r.text.split('\r\n')):
-        line_suffix, count_str = line.split(':', 1)
+    hash_suffix = pw_hash[5:].upper().encode()
+    for line in filter(None, r.content.split(b'\r\n')):
+        line_suffix, count_str = line.split(b':', 1)
         if line_suffix == hash_suffix:
             if int(count_str) > threshold:
                 raise manual_response_error(field_name, error_message)
