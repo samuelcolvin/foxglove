@@ -49,7 +49,7 @@ async def check_password_breached(
     UnexpectedResponse.check(r)
 
     hash_suffix = pw_hash[5:].upper().encode()
-    for line in filter(None, r.content.split(b'\r\n')):
+    for line in r.content.splitlines():
         line_suffix, count_str = line.split(b':', 1)
         if line_suffix == hash_suffix:
             if int(count_str) > threshold:
