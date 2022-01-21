@@ -24,6 +24,11 @@ async def test_password_correct(settings, mocker):
     assert check_pw.spy_return is True
 
 
+async def test_password_correct_null(settings):
+    pw_hash = await hash_password(SecretBytes(b'testing'))
+    assert await check_password_correct(SecretBytes(b'test\x00ing'), pw_hash) is False
+
+
 async def test_password_none(settings, mocker):
     check_pw = mocker.spy(auth_bcrypt, 'checkpw')
     assert await check_password_correct(SecretBytes(b'testing'), None) is False

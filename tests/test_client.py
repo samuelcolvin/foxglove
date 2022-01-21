@@ -72,7 +72,6 @@ def test_errors_expected_sentry(client_sentry: Client, caplog, mocker):
     assert m.call_args.args[1] is None
 
 
-@pytest.mark.xfail(strict=True, reason='waiting for fastAPI to upgrade to starlette v0.17.1')
 def test_errors_exception(client: Client, caplog):
     r = client.get('/error/', params={'error': 'RuntimeError'})
     assert r.status_code == 500, r.text
@@ -81,7 +80,6 @@ def test_errors_exception(client: Client, caplog):
     assert caplog.records[0].request['url'] == 'http://testserver/error/?error=RuntimeError'
 
 
-@pytest.mark.xfail(strict=True, reason='waiting for fastAPI to upgrade to starlette v0.17.1')
 def test_errors_exception_sentry(client_sentry: Client, caplog, mocker):
     m = mocker.patch('foxglove.middleware.capture_event')
     r = client_sentry.get('/error/', params={'error': 'RuntimeError'})
@@ -94,3 +92,10 @@ def test_errors_exception_sentry(client_sentry: Client, caplog, mocker):
     assert m.call_args.args[0]['message'] == msg
     assert m.call_args.args[0]['fingerprint'] == ('/error/', 'GET', "RuntimeError('raised RuntimeError')")
     assert m.call_args.args[1] is not None
+
+
+def test_null_json_error(client: Client):
+    client.get_json('/')
+    assert client.post_json('/create-user/', {'first_name': 'Samuel\x00', 'last_name': 'Colvin'}, status=400) == {
+        'detail': 'There was an error parsing the body'
+    }
