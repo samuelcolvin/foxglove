@@ -1,15 +1,11 @@
-import asyncio
-
-import pytest
 from typer.testing import CliRunner
 
 from foxglove import glove
 from foxglove.cli import cli
 
-runner = CliRunner()
-
 
 def test_print_commands():
+    runner = CliRunner()
     result = runner.invoke(cli, ['--help'])
     assert result.exit_code == 0, result.output
     assert 'foxglove command line interface' in result.output
@@ -17,6 +13,7 @@ def test_print_commands():
 
 
 def test_patches_print():
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'patch'])
     assert result.exit_code == 0, result.output
     assert 'rerun_sql: rerun the contents of settings.sql_path' in result.output
@@ -24,6 +21,7 @@ def test_patches_print():
 
 
 def test_patches_check_args(clean_db, loop):
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'patch', 'check_args', '-a', 'user_id:123', '-a', 'co:Testing'])
     assert result.exit_code == 0, result.output
     assert "checking args: {'user_id': '123', 'co': 'Testing'}" in result.output
@@ -31,6 +29,7 @@ def test_patches_check_args(clean_db, loop):
 
 def test_web_no_settings(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.cli.uvicorn_run')
+    runner = CliRunner()
     result = runner.invoke(cli, ['web'])
     assert result.exit_code == 1, result.output
     assert 'unable to infer settings path' in result.output
@@ -39,6 +38,7 @@ def test_web_no_settings(mocker):
 
 def test_web(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.cli.uvicorn_run')
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'web'])
     assert result.exit_code == 0, result.output
     assert 'running web server at 8000...' in result.output
@@ -52,6 +52,7 @@ def test_web(mocker):
 
 def test_dev(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.cli.uvicorn_run')
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings:Settings', 'dev'])
     assert result.exit_code == 0, result.output
     assert 'running web server at 8000 in dev mode...' in result.output
@@ -65,6 +66,7 @@ def test_dev(mocker):
 
 def test_auto_web(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.cli.uvicorn_run')
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'auto'], env={'FOXGLOVE_COMMAND': 'web'})
     assert result.exit_code == 0, result.output
     assert 'running web server at 8000...' in result.output
@@ -86,19 +88,17 @@ def test_auto_web(mocker):
     assert mock_uvicorn_run.call_args.kwargs['port'] == 5000
 
 
-@pytest.mark.filterwarnings('ignore::DeprecationWarning')
-def test_worker():
-    try:
-        result = runner.invoke(cli, ['-s', 'demo.settings', 'worker'])
-        assert result.exit_code == 0, result.output
-        assert 'running worker...' in result.output
-        assert 'running demo worker function, ans: 256' in result.output
-    finally:
-        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+def test_worker(loop):
+    runner = CliRunner()
+    result = runner.invoke(cli, ['-s', 'demo.settings', 'worker'])
+    assert result.exit_code == 0, result.output
+    assert 'running worker...' in result.output
+    assert 'running demo worker function, ans: 256' in result.output
 
 
 def test_reset_database(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.db.reset_database')
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'reset_database'])
     assert 'running reset_database...' in result.output
     assert mock_uvicorn_run.call_count == 1
@@ -106,6 +106,7 @@ def test_reset_database(mocker):
 
 def test_run_migrations(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.db.migrations.run_migrations')
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'migrations'])
     assert 'running migrations live=False fake=False...' in result.output
     assert mock_uvicorn_run.call_count == 1
@@ -113,6 +114,7 @@ def test_run_migrations(mocker):
 
 def test_run_migrations_fake(mocker):
     mock_uvicorn_run = mocker.patch('foxglove.db.migrations.run_migrations')
+    runner = CliRunner()
     result = runner.invoke(cli, ['-s', 'demo.settings', 'migrations', '--live', '--fake'])
     assert 'running migrations live=True fake=True...' in result.output
     assert mock_uvicorn_run.call_count == 1
