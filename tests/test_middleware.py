@@ -6,7 +6,7 @@ from starlette.responses import Response
 
 import foxglove.middleware
 from foxglove.middleware import CloudflareCheckMiddleware, CsrfMiddleware, HostRedirectMiddleware
-from foxglove.testing import Client
+from foxglove.testing import TestClient as Client
 
 pytestmark = pytest.mark.asyncio
 
@@ -122,7 +122,7 @@ async def test_cloudflare_multiple(create_request, glove, mocker):
 
 def test_index(client: Client):
     assert client.post_json('/no-csrf/') is None
-    assert client.last_request.status_code == 200
+    assert client.last_response.status_code == 200
 
 
 @pytest.mark.parametrize(
