@@ -50,7 +50,7 @@ setup(
         'arq>=0.19.1',
         'aioredis>=1.3.1,<2',
         'asyncpg>=0.23.0',
-        'fastapi>=0.70',
+        'fastapi>=0.72',
         'itsdangerous>=1.1.0',
         'buildpg>=0.3.0',
         'httpx>=0.21.1',
