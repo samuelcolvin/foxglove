@@ -1,3 +1,11 @@
+"""
+Client for testing, this is mostly copied from starlette 0.14.2
+
+https://github.com/encode/starlette/blob/0.14.2/starlette/testclient.py
+
+After that the standard test client for starlette started using threads to run the server and therefore
+broke support for a database connection shared between the test code and the application code.
+"""
 import asyncio
 import http
 import inspect
