@@ -390,7 +390,7 @@ async def get_cloudflare_ips() -> List[IPRangeCounter]:
     """
 
     async def get_ips(v: Literal[4, 6]) -> List[IPRangeCounter]:
-        r = await glove.http.get(f'https://www.cloudflare.com/ips-v{v}')
+        r = await glove.http.get(f'https://www.cloudflare.com/ips-v{v}', follow_redirects=True)
         UnexpectedResponse.check(r)
         return [IPRangeCounter(ip) for ip in r.text.strip().split('\n')]
 
