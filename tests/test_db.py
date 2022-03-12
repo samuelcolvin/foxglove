@@ -2,7 +2,7 @@ import logging
 
 import pytest
 from buildpg.asyncpg import BuildPgConnection
-from dirty_equals import IsPositiveInt, IsNow
+from dirty_equals import IsNow, IsPositiveInt
 
 from foxglove.db import prepare_database
 from foxglove.db.utils import AsyncPgContext

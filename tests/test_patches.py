@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-from dirty_equals import IsPositiveInt, IsNow
+from dirty_equals import IsNow, IsPositiveInt
 
 from foxglove import BaseSettings
 from foxglove.db.migrations import run_migrations
