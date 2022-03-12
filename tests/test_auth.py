@@ -60,7 +60,9 @@ def get_redis_keys(glove, loop):
             return None
         else:
             assert len(keys) == 1
-            return keys[0], await glove.redis.get(keys[0])
+            key = keys[0]
+            value = await glove.redis.get(key)
+            return key.decode(), value.decode()
 
     return loop.run_until_complete(_run())
 

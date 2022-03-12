@@ -12,8 +12,7 @@ async def async_flush_redis(settings: BaseSettings):
 
     redis = await create_pool(settings.redis_settings)
     await redis.flushdb()
-    redis.close()
-    await redis.wait_closed()
+    await redis.close(close_connection_pool=True)
 
 
 def flush_redis(settings: BaseSettings):

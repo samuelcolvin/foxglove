@@ -47,8 +47,7 @@ setup(
     python_requires='>=3.8',
     zip_safe=True,
     install_requires=[
-        'arq>=0.19.1',
-        'aioredis>=1.3.1,<2',
+        'arq>=0.23a1',
         'asyncpg>=0.23.0',
         'fastapi>=0.72',
         'itsdangerous>=1.1.0',

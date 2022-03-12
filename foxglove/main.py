@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Literal
+from typing import Literal, cast
 
 import arq
 import httpx
@@ -43,8 +43,7 @@ class Glove:
         if http := getattr(self, '_http', None):
             coros.append(http.aclose())
         if redis := getattr(self, 'redis', None):
-            redis.close()
-            coros.append(redis.wait_closed())
+            coros.append(redis.close(close_connection_pool=True))
         await asyncio.gather(*coros)
         for prop in 'pg', '_http', 'redis':
             if hasattr(self, prop):

@@ -19,16 +19,12 @@ __all__ = 'rate_limit', 'check_password_breached', 'check_password_correct', 'ha
 def rate_limit(*, request_limit: Optional[int], interval: int):
     async def check_rate_limit(request: Request) -> int:
         cache_key = f'rate-limit:{request.method}{request.url.path}:{get_ip(request)}:{time() // interval:0.0f}'
-        with await glove.redis as conn:
-            pipe = conn.pipeline()
-            pipe.unwatch()
-            pipe.incr(cache_key)
-            pipe.expire(cache_key, interval)
-            _, request_count, _ = await pipe.execute()
-            if request_limit is None:
-                return request_count or 0
-            elif request_count > request_limit:
-                raise HttpTooManyRequests(f'rate limit of {request_limit} requests per {interval} seconds exceeded')
+        async with glove.redis.pipeline(transaction=True) as pipe:
+            request_count, _ = await pipe.incr(cache_key).expire(cache_key, interval).execute()
+        if request_limit is None:
+            return request_count or 0
+        elif request_count > request_limit:
+            raise HttpTooManyRequests(f'rate limit of {request_limit} requests per {interval} seconds exceeded')
 
     return check_rate_limit
 
