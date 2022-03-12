@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Literal, cast
+from typing import Literal
 
 import arq
 import httpx
