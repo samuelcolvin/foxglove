@@ -1,6 +1,5 @@
 import logging
 
-import pytest
 from buildpg.asyncpg import BuildPgConnection
 from dirty_equals import IsNow, IsPositiveInt
 

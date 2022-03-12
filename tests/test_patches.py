@@ -1,6 +1,5 @@
 import logging
 
-import pytest
 from dirty_equals import IsNow, IsPositiveInt
 
 from foxglove import BaseSettings
