@@ -9,10 +9,10 @@ from foxglove.db.utils import AsyncPgContext
 from tests.conftest import SyncConnContext
 
 
-def test_patch_live(settings: BaseSettings, wipe_db, caplog):
+def test_patch_live(settings: BaseSettings, wipe_db, caplog, loop):
     caplog.set_level(logging.INFO, 'foxglove.db')
     run_patch('insert_org', True, {})
-    with SyncConnContext(settings.pg_dsn) as conn:
+    with SyncConnContext(settings.pg_dsn, loop) as conn:
         assert conn.fetchval('select count(*) from organisations') == 1
 
     assert caplog.messages == [
@@ -21,10 +21,10 @@ def test_patch_live(settings: BaseSettings, wipe_db, caplog):
     ]
 
 
-def test_patch_dry_run(settings: BaseSettings, wipe_db, caplog):
+def test_patch_dry_run(settings: BaseSettings, wipe_db, caplog, loop):
     caplog.set_level(logging.INFO)
     run_patch('insert_org', False, {})
-    with SyncConnContext(settings.pg_dsn) as conn:
+    with SyncConnContext(settings.pg_dsn, loop) as conn:
         assert conn.fetchval('select count(*) from organisations') == 0
 
     assert caplog.messages == [
@@ -33,10 +33,10 @@ def test_patch_dry_run(settings: BaseSettings, wipe_db, caplog):
     ]
 
 
-def test_patch_error(settings: BaseSettings, wipe_db, caplog):
+def test_patch_error(settings: BaseSettings, wipe_db, caplog, loop):
     caplog.set_level(logging.INFO, 'foxglove.db')
     run_patch('insert_org', False, {'fail': '1'})
-    with SyncConnContext(settings.pg_dsn) as conn:
+    with SyncConnContext(settings.pg_dsn, loop) as conn:
         assert conn.fetchval('select count(*) from organisations') == 0
 
     assert caplog.messages == [
