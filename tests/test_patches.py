@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-from pytest_toolbox.comparison import AnyInt, CloseToNow
+from dirty_equals import IsNow, IsPositiveInt
 
 from foxglove import BaseSettings
 from foxglove.db.migrations import run_migrations
@@ -63,10 +63,10 @@ async def test_run_migrations_ok(settings: BaseSettings, wipe_db, db_conn, caplo
         migrations = dict(await conn.fetchrow('select * from migrations'))
 
     assert migrations == {
-        'id': AnyInt(),
+        'id': IsPositiveInt,
         'ref': 'ok_patch:foobar',
         'sql_section': '-',
-        'ts': CloseToNow(),
+        'ts': IsNow(tz='utc'),
         'fake': False,
     }
     assert await run_migrations(settings, patches, True) == 0
@@ -167,10 +167,10 @@ async def test_run_migrations_fake(settings: BaseSettings, wipe_db, db_conn, cap
         migrations = dict(await conn.fetchrow('select * from migrations'))
 
     assert migrations == {
-        'id': AnyInt(),
+        'id': IsPositiveInt,
         'ref': 'ok_patch',
         'sql_section': '-',
-        'ts': CloseToNow(),
+        'ts': IsNow(tz='utc'),
         'fake': True,
     }
 
