@@ -2,7 +2,7 @@ import logging
 
 import pytest
 from buildpg.asyncpg import BuildPgConnection
-from pytest_toolbox.comparison import AnyInt, CloseToNow
+from dirty_equals import IsPositiveInt, IsNow
 
 from foxglove.db import prepare_database
 from foxglove.db.utils import AsyncPgContext
@@ -38,7 +38,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
         migrations = dict(await conn.fetchrow('select * from migrations'))
 
     assert migrations == {
-        'id': AnyInt(),
+        'id': IsPositiveInt,
         'ref': 'run_full_name',
         'sql_section': (
             'full_name::\n'
@@ -48,7 +48,7 @@ async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings:
             '  end;\n'
             '$$ language plpgsql;'
         ),
-        'ts': CloseToNow(),
+        'ts': IsNow(tz='utc'),
         'fake': True,
     }
 
