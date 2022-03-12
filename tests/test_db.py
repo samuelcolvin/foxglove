@@ -10,8 +10,6 @@ from foxglove.redis import async_flush_redis, flush_redis
 from foxglove.settings import BaseSettings
 from tests.conftest import ConnContext
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_prepare_database(db_conn_global: BuildPgConnection, alt_settings: BaseSettings, caplog):
     await db_conn_global.execute(f'drop database if exists {alt_settings.pg_name}')

@@ -5,8 +5,6 @@ import pytest
 
 from foxglove.test_server import DummyServer, Offline
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_dummy_get(dummy_server: DummyServer, glove):
     r = await glove.http.get(f'http://localhost:{dummy_server.server.port}/status/200/')

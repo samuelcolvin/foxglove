@@ -9,8 +9,6 @@ from foxglove.db.patches import Patch, run_patch
 from foxglove.db.utils import AsyncPgContext
 from tests.conftest import SyncConnContext
 
-pytestmark = pytest.mark.asyncio
-
 
 def test_patch_live(settings: BaseSettings, wipe_db, caplog):
     caplog.set_level(logging.INFO, 'foxglove.db')

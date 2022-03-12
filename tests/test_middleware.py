@@ -8,8 +8,6 @@ import foxglove.middleware
 from foxglove.middleware import CloudflareCheckMiddleware, CsrfMiddleware, HostRedirectMiddleware
 from foxglove.testing import TestClient as Client
 
-pytestmark = pytest.mark.asyncio
-
 
 async def next_function(request: Request):
     return Response('ok')
