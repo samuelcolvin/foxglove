@@ -6,8 +6,6 @@ from foxglove.auth import bcrypt as auth_bcrypt, check_password_breached, check_
 from foxglove.exceptions import HttpUnprocessableEntity
 from foxglove.testing import TestClient as Client
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_password_hash(settings):
     pw_hash = await hash_password(SecretBytes(b'testing'))

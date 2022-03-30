@@ -5,8 +5,6 @@ import pytest
 
 from foxglove.test_server import DummyServer, Offline
 
-pytestmark = pytest.mark.asyncio
-
 
 async def test_dummy_get(dummy_server: DummyServer, glove):
     r = await glove.http.get(f'http://localhost:{dummy_server.server.port}/status/200/')
@@ -45,19 +43,19 @@ async def test_dummy_405(dummy_server: DummyServer, glove):
     assert dummy_server.log == ['GET /recaptcha_url/ > 405']
 
 
-def test_offline_online(loop):
-    o = Offline(loop)
+def test_offline_online():
+    o = Offline()
     assert bool(o) is False
     assert bool(o) is False
 
 
-def test_offline_offline(mocker, loop, capsys):
+def test_offline_offline(mocker, capsys):
     ci_value = os.getenv('CI')
     if ci_value:
         del os.environ['CI']
     try:
         m = mocker.patch('aiodns.DNSResolver.query', side_effect=asyncio.TimeoutError)
-        o = Offline(loop)
+        o = Offline()
         assert bool(o) is True
         assert bool(o) is True
         m.assert_called_once()

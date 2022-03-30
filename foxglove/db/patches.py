@@ -56,8 +56,8 @@ def run_patch(patch_name: str, live: bool, args: Dict[str, str]):
         log_msg = f'running patch {patch_name} direct'
     else:
         log_msg = f'running patch {patch_name} {"live" if live else "not live"}'
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(_run_patch(patch, live, args, log_msg)) or 0
+
+    return asyncio.run(_run_patch(patch, live, args, log_msg)) or 0
 
 
 async def _run_patch(patch: Patch, live: bool, args: Dict[str, str], log_msg: str):

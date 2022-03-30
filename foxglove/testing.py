@@ -109,10 +109,17 @@ class _WrapASGI2:
 
 
 class _ASGIAdapter(HTTPAdapter):
-    def __init__(self, app: ASGI3App, raise_server_exceptions: bool = True, root_path: str = '') -> None:
+    def __init__(
+        self,
+        app: ASGI3App,
+        raise_server_exceptions: bool = True,
+        root_path: str = '',
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ) -> None:
         self.app = app
         self.raise_server_exceptions = raise_server_exceptions
         self.root_path = root_path
+        self.loop = loop or asyncio.get_event_loop()
 
     def send(self, request: PreparedRequest, *args: Any, **kwargs: Any) -> Response:  # noqa: C901
         scheme, netloc, path, query, fragment = (str(item) for item in urlsplit(request.url))
@@ -233,13 +240,7 @@ class _ASGIAdapter(HTTPAdapter):
                 context = message['context']
 
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        try:
-            loop.run_until_complete(self.app(scope, receive, send))
+            self.loop.run_until_complete(self.app(scope, receive, send))
         except BaseException as exc:
             if self.raise_server_exceptions:
                 raise exc from None
@@ -373,6 +374,7 @@ class TestClient(requests.Session):
         base_url: str = 'http://testserver',
         raise_server_exceptions: bool = True,
         root_path: str = '',
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
         super(TestClient, self).__init__()
         assert _is_asgi3(app), f'{app} is not an ASGI3 app'
@@ -383,10 +385,12 @@ class TestClient(requests.Session):
             app = cast(ASGI2App, app)
             asgi_app = _WrapASGI2(app)
 
+        self.loop = loop or asyncio.get_event_loop()
         adapter = _ASGIAdapter(
             asgi_app,
             raise_server_exceptions=raise_server_exceptions,
             root_path=root_path,
+            loop=self.loop,
         )
         self.mount('http://', adapter)
         self.mount('https://', adapter)
@@ -456,16 +460,14 @@ class TestClient(requests.Session):
         return session
 
     def __enter__(self) -> 'TestClient':
-        loop = asyncio.get_event_loop()
         self.send_queue = asyncio.Queue()
         self.receive_queue = asyncio.Queue()
-        self.task = loop.create_task(self.lifespan())
-        loop.run_until_complete(self.wait_startup())
+        self.task = self.loop.create_task(self.lifespan())
+        self.loop.run_until_complete(self.wait_startup())
         return self
 
     def __exit__(self, *args: Any) -> None:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.wait_shutdown())
+        self.loop.run_until_complete(self.wait_shutdown())
 
     async def lifespan(self) -> None:
         scope = {'type': 'lifespan'}

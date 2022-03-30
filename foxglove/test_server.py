@@ -105,14 +105,12 @@ class Offline:
             ...
     """
 
-    def __init__(self, loop=None):
-        self._loop = loop
+    def __init__(self):
         self.is_offline = None
 
     def __bool__(self):
         if self.is_offline is None:
-            loop = self._loop or asyncio.get_event_loop()
-            self.is_offline = loop.run_until_complete(self._check())
+            self.is_offline = asyncio.run(self._check())
         return self.is_offline
 
     async def _check(self):

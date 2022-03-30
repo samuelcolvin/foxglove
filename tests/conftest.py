@@ -120,18 +120,18 @@ class SyncConnContext:
 
 
 @pytest.fixture(name='client')
-def fix_client(settings: Settings, db_conn, glove):
+def fix_client(settings: Settings, db_conn, glove, loop):
     app = settings.create_app()
-    with TestClient(app) as client:
+    with TestClient(app, loop=loop) as client:
         yield client
 
 
 @pytest.fixture(name='client_sentry')
-def fix_client_sentry(settings: Settings, db_conn, glove):
+def fix_client_sentry(settings: Settings, db_conn, glove, loop):
     settings.sentry_dsn = 'https://123@example.com/789'
     glove._settings = settings
     app = settings.create_app()
-    with TestClient(app) as client:
+    with TestClient(app, loop=loop) as client:
         yield client
     settings.sentry_dsn = None
 
