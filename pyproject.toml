@@ -61,7 +61,10 @@ Changelog = 'https://github.com/samuelcolvin/foxglove/releases'
 testpaths = 'tests'
 timeout = 5
 asyncio_mode = 'auto'
-filterwarnings = ['error']
+filterwarnings = [
+    'error',
+    "ignore:'cgi' is deprecated and slated for removal in Python 3.13:DeprecationWarning"
+]
 
 [tool.flake8]
 max_line_length = 120
