@@ -1,31 +1,28 @@
 .DEFAULT_GOAL := all
-isort = isort foxglove tests
-black = black -S -l 120 --target-version py38 foxglove tests
+paths = foxglove tests
+isort = isort
+black = black foxglove tests
 
 .PHONY: install
 install:
-	pip install -U pip wheel
+	pip install -U pip
+	pip install -r requirements/all.txt
 	pip install -U -e .[extra]
-	pip install -r tests/requirements.txt
-
-.PHONY: install-all
-install-all: install
-	pip install -r tests/requirements-linting.txt
 
 .PHONY: format
 format:
-	$(isort)
-	$(black)
+	isort $(paths)
+	black $(paths)
 
 .PHONY: lint
 lint:
-	flake8 foxglove/ tests/
-	$(isort) --check-only --df
-	$(black) --check --diff
+	flake8 $(paths)
+	isort $(paths) --check-only --df
+	black $(paths) --check --diff
 
 .PHONY: test
 test:
-	pytest --cov=foxglove
+	coverage run -m pytest
 
 .PHONY: testcov
 testcov:

@@ -1,56 +1,28 @@
-from importlib.machinery import SourceFileLoader
-from pathlib import Path
+import sys
 
-from setuptools import setup
+sys.stderr.write(
+    """
+===============================
+Unsupported installation method
+===============================
+foxglove-web no longer supports installation with `python setup.py install`.
+Please use `python -m pip install .` instead.
+"""
+)
+sys.exit(1)
 
-description = 'Tools for Starlette'
-THIS_DIR = Path(__file__).resolve().parent
-try:
-    long_description = THIS_DIR.joinpath('README.md').read_text()
-except FileNotFoundError:
-    long_description = description
 
-# avoid loading the package before requirements are installed:
-version = SourceFileLoader('version', 'foxglove/version.py').load_module()
+# The below code will never execute, however GitHub is particularly
+# picky about where it finds Python packaging metadata.
+# See: https://github.com/github/feedback/discussions/6456
+#
+# To be removed once GitHub catches up.
 
 setup(
     name='foxglove-web',
-    version=str(version.VERSION),
-    description=description,
-    long_description=long_description,
-    long_description_content_type='text/markdown',
-    classifiers=[
-        'Development Status :: 4 - Beta',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Information Technology',
-        'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: Unix',
-        'Operating System :: POSIX :: Linux',
-        'Environment :: MacOS X',
-        'Topic :: Internet',
-    ],
-    author='Samuel Colvin',
-    author_email='s@muelcolvin.com',
-    url='https://github.com/samuelcolvin/foxglove',
-    license='MIT',
-    packages=['foxglove', 'foxglove.db'],
-    entry_points="""
-        [console_scripts]
-        foxglove=foxglove.__main__:cli
-    """,
-    python_requires='>=3.8',
-    zip_safe=True,
     install_requires=[
-        'arq>=0.23a1',
+        'arq>=0.23',
         'asyncpg>=0.23.0',
-        'click==8.0.4',
         'fastapi>=0.72',
         'itsdangerous>=1.1.0',
         'buildpg>=0.3.0',
@@ -60,14 +32,4 @@ setup(
         'typer>=0.3.2',
         'uvicorn>=0.13.3',
     ],
-    extras_require={
-        'extra': [
-            'ipython>=7.7.0',
-            'watchgod>=0.6',
-            'aiohttp>=3.6.2',
-            'aiodns>=2.0.0',
-            'requests>=2.24.0',
-            'bcrypt>=3.2.0',
-        ],
-    },
 )
