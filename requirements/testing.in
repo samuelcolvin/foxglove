@@ -7,4 +7,5 @@ pytest-cov
 pytest-mock
 pytest-sugar
 pytest-timeout
+requests
 uvloop
