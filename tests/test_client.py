@@ -97,3 +97,8 @@ def test_null_json_error(client: Client):
     assert client.post_json('/create-user/', {'first_name': 'Samuel\x00', 'last_name': 'Colvin'}, status=400) == {
         'detail': 'There was an error parsing the body'
     }
+
+
+def test_template(client: Client):
+    r = client.get('/template/')
+    assert r.status_code == 200, r.text

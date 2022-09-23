@@ -1,9 +1,11 @@
 import asyncio
 import logging
+from pathlib import Path
 from typing import Optional
 
 from buildpg.asyncpg import BuildPgConnection
 from fastapi import Depends, FastAPI, Request
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -124,3 +126,12 @@ async def rate_limit_raise():
 @app.get('/rate-limit-return/')
 async def rate_limit_return(request_count: int = Depends(rate_limit(request_limit=None, interval=1000))):
     return {'request_count': request_count}
+
+
+THIS_DIR = Path(__file__).parent
+templates = Jinja2Templates(directory=THIS_DIR / 'templates')
+
+
+@app.get('/template/')
+async def return_template(request: Request):
+    return templates.TemplateResponse('foobar.jinja', {'request': request, 'name': 'Samuel'})
