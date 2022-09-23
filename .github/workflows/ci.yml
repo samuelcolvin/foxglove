@@ -51,7 +51,6 @@ jobs:
         key: |
           ${{ runner.os }}-
           ${{ env.pythonLocation }}-
-          ${{ hashFiles('pyproject.toml') }}-
           ${{ hashFiles('requirements/pyproject.txt') }}-
           ${{ hashFiles('requirements/testing.txt') }}
 

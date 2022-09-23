@@ -76,6 +76,11 @@ ignore = ['E203', 'W503']
 [tool.coverage.run]
 source = ['foxglove']
 branch = true
+# TODO test this one day
+omit = [
+    'foxglove/devtools.py',
+    'foxglove/testing.py',
+]
 
 [tool.coverage.report]
 precision = 2
