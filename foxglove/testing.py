@@ -376,7 +376,7 @@ class TestClient(requests.Session):
         root_path: str = '',
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
-        super(TestClient, self).__init__()
+        super().__init__()
         assert _is_asgi3(app), f'{app} is not an ASGI3 app'
         if _is_asgi3(app):
             app = cast(ASGI3App, app)

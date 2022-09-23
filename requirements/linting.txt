@@ -47,12 +47,8 @@ pycodestyle==2.9.1
     # via flake8
 pyflakes==2.5.0
     # via flake8
-pyupgrade==2.38.0
-    # via -r requirements/linting.in
 pyyaml==6.0
     # via pre-commit
-tokenize-rt==4.2.1
-    # via pyupgrade
 toml==0.10.2
     # via pre-commit
 tomli==2.0.1

@@ -97,4 +97,3 @@ class ReloadWebsocket {
 wait_for_server(() => {
   window.dev_reloader = new ReloadWebsocket()
 })
-

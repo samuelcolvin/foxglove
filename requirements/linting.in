@@ -3,5 +3,4 @@ flake8
 flake8-quotes
 flake8-pyproject
 isort[colors]
-pyupgrade
 pre-commit

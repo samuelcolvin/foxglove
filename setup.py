@@ -23,7 +23,6 @@ setup(
     install_requires=[
         'arq>=0.23',
         'asyncpg>=0.23.0',
-        'click==8.0.4',
         'fastapi>=0.72',
         'itsdangerous>=1.1.0',
         'buildpg>=0.3.0',
