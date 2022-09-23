@@ -53,6 +53,8 @@ jobs:
     - run: pip install -r requirements/testing.txt -r requirements/pyproject.txt
       if: steps.cache.outputs.cache-hit != 'true'
 
+    - run: pip install .
+
     - run: coverage run -m pytest
     - run: coverage xml
 
