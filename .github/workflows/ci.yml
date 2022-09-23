@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10', '3.11-dev']
 
     services:
       postgres:
@@ -37,22 +37,26 @@ jobs:
       PYTHON: ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: set up python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: install dependencies
-      run: |
-        make install
-        pip freeze
+    - uses: actions/cache@v3
+      id: cache
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('requirements/tests.txt') }}
 
-    - run: pytest --cov=foxglove -vv
+    - run: pip install -r requirements/tests.txt -r requirements/pyproject.txt
+      if: steps.cache.outputs.cache-hit != 'true'
+
+    - run: coverage run -m pytest
     - run: coverage xml
 
-    - uses: codecov/codecov-action@v1.0.13
+    - uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         env_vars: PYTHON
@@ -61,15 +65,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - uses: actions/setup-python@v1
-      with:
-        python-version: '3.9'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    - run: pip install -r tests/requirements-linting.txt
+      - uses: actions/cache@v3
+        id: cache
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements/linting.txt') }}-${{ hashFiles('pyproject.toml') }}
 
-    - run: make lint
+      - run: pip install -r requirements/linting.txt
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --all-files
 
   deploy:
     needs:
@@ -79,20 +92,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: set up python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: install
-        run: pip install -U pip setuptools twine wheel
+        run: pip install -U twine build packaging
 
-      - name: set version
-        run: VERSION_PATH='foxglove/version.py' python <(curl -Ls https://git.io/JT3rm)
+      - name: check version
+        id: check-version
+        run: python <(curl -Ls https://gist.githubusercontent.com/samuelcolvin/4e1ad439c5489e8d6478cdee3eb952ef/raw/check_version.py)
+        env:
+          VERSION_PATH: 'foxglove/version.py'
 
-      - run: python setup.py sdist bdist_wheel
+      - name: build
+        run: python -m build
 
       - run: twine check dist/*
 
