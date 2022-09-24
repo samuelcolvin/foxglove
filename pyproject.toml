@@ -6,7 +6,7 @@ build-backend = 'hatchling.build'
 path = 'foxglove/version.py'
 
 [project]
-name = 'foxglove'
+name = 'foxglove-web'
 description = 'Tools for FastAPI'
 authors = [{name = 'Samuel Colvin', email = 's@muelcolvin.com'}]
 license = {file = 'LICENSE'}
