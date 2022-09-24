@@ -1,11 +1,10 @@
 import asyncio
 import logging
-from pathlib import Path
 from typing import Optional
 
 from buildpg.asyncpg import BuildPgConnection
 from fastapi import Depends, FastAPI, Request
-from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -17,6 +16,7 @@ from foxglove.db.middleware import get_db
 from foxglove.middleware import CsrfMiddleware, ErrorMiddleware
 from foxglove.recaptcha import RecaptchaDepends
 from foxglove.route_class import SafeAPIRoute
+from foxglove.templates import FoxgloveTemplates
 
 logger = logging.getLogger('main')
 
@@ -55,6 +55,7 @@ app = FastAPI(
     redoc_url='/docs',
 )
 app.router.route_class = SafeAPIRoute
+app.mount('/static', StaticFiles(directory=glove.settings.static), name='static')
 
 
 @app.exception_handler(exceptions.HttpMessageError)
@@ -128,10 +129,22 @@ async def rate_limit_return(request_count: int = Depends(rate_limit(request_limi
     return {'request_count': request_count}
 
 
-THIS_DIR = Path(__file__).parent
-templates = Jinja2Templates(directory=THIS_DIR / 'templates')
+templates = FoxgloveTemplates()
 
 
 @app.get('/template/')
-async def return_template(request: Request):
-    return templates.TemplateResponse('foobar.jinja', {'request': request, 'name': 'Samuel'})
+@templates.render('foobar.jinja')
+async def render_template(request: Request):
+    return {'name': 'Samuel'}
+
+
+@app.get('/template/456/')
+@templates.render('foobar.jinja')
+def render_template_456(request: Request):
+    return 456, None
+
+
+@app.get('/template/spam/')
+@templates.render('spam.jinja')
+def render_template_spam(request: Request):
+    pass
