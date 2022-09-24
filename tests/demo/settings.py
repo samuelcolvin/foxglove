@@ -14,5 +14,7 @@ class Settings(BaseSettings):
     pg_dsn = 'postgres://postgres@localhost:5432/foxglove_demo'
     app = 'demo.main:app'
     redis_settings: Optional[RedisSettings] = 'redis://localhost:6379/6'
+    template_dir = THIS_DIR / 'templates'
+    static = THIS_DIR / 'static'
 
     worker_func = 'demo.main:worker'

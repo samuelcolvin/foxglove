@@ -56,6 +56,7 @@ class BaseSettings(PydanticBaseSettings):
     patch_paths: List[str] = ['src.patches']
 
     sql_path: Path = 'models.sql'
+    template_dir: Optional[Path] = None
     pg_dsn: Optional[str] = pg_dsn_default
     # eg. the db already exists on heroku and never has to be created
     pg_db_exists = False
@@ -154,5 +155,5 @@ class BaseSettings(PydanticBaseSettings):
             'redis_settings': {'env': ['REDISCLOUD_URL', 'REDIS_URL']},
             'dev_mode': {'env': ['foxglove_dev_mode']},
             'environment': {'env': ['ENV', 'ENVIRONMENT']},
-            'release': {'env': ['COMMIT', 'RELEASE', 'HEROKU_SLUG_COMMIT']},
+            'release': {'env': ['COMMIT', 'RELEASE', 'HEROKU_SLUG_COMMIT', 'RENDER_GIT_COMMIT']},
         }
