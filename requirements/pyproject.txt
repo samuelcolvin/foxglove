@@ -80,7 +80,7 @@ idna==3.4
     #   requests
     #   rfc3986
     #   yarl
-ipython==8.5.0
+ipython==8.10.0
     # via foxglove (pyproject.toml)
 itsdangerous==2.1.2
     # via foxglove (pyproject.toml)
