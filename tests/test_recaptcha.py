@@ -4,8 +4,7 @@ import pytest
 
 from foxglove import exceptions
 from foxglove.recaptcha import check_recaptcha
-from foxglove.test_server import DummyServer
-from foxglove.testing import TestClient as Client
+from foxglove.testing import DummyServer, TestClient as Client
 
 
 def test_success(client: Client, settings, dummy_server: DummyServer, caplog):

@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from foxglove.test_server import DummyServer, Offline
+from foxglove.testing import DummyServer, Offline
 
 
 async def test_dummy_get(dummy_server: DummyServer, glove):
