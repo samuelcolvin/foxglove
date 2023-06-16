@@ -12,8 +12,6 @@ from aiohttp.web_middlewares import middleware
 from aiohttp.web_response import Response, json_response
 from async_timeout import timeout
 
-__all__ = 'create_dummy_server', 'DummyServer', 'Offline'
-
 
 async def return_any_status(request):
     status = int(request.match_info['status'])
