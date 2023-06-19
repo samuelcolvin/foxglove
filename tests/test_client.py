@@ -14,7 +14,7 @@ def test_post_index(client: Client):
 
 
 def test_request_error(client: Client, mocker):
-    fail_mock = mocker.patch('foxglove.testing.pytest.fail')
+    fail_mock = mocker.patch('foxglove.testing.test_client.pytest.fail')
     client.post_json('/')
     fail_mock.called_once()
 

@@ -10,8 +10,7 @@ from demo.settings import Settings
 from foxglove import glove
 from foxglove.db import lenient_conn, prepare_database
 from foxglove.db.helpers import DummyPgPool, SyncDb
-from foxglove.test_server import create_dummy_server
-from foxglove.testing import TestClient
+from foxglove.testing import TestClient, create_dummy_server
 
 commit_transactions = 'KEEP_DB' in os.environ
 
