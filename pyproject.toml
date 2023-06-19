@@ -6,7 +6,7 @@ build-backend = 'hatchling.build'
 path = 'foxglove/version.py'
 
 [tool.hatch.build]
-packages = ["foxglove"]
+packages = ['foxglove']
 
 [project]
 name = 'foxglove-web'
