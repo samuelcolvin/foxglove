@@ -48,3 +48,18 @@ clean:
 	rm -rf build
 	rm -rf dist
 	python setup.py clean
+
+.PHONY: upgrade-requirements
+upgrade-requirements:
+	@echo "upgrading dependencies"
+	@pip-compile --quiet --upgrade --output-file=requirements/pyproject.txt pyproject.toml
+	@pip-compile --quiet --upgrade --output-file=requirements/linting.txt requirements/linting.in
+	@pip-compile --quiet --upgrade --output-file=requirements/testing.txt requirements/testing.in
+	@echo "dependencies has been upgraded"
+
+.PHONY: rebuild-requirements
+rebuild-requirements:
+	rm requirements/pyproject.txt requirements/linting.txt requirements/testing.txt
+	pip-compile --quiet --rebuild --output-file=requirements/pyproject.txt pyproject.toml
+	pip-compile --quiet --rebuild --output-file=requirements/linting.txt requirements/linting.in
+	pip-compile --quiet --rebuild --output-file=requirements/testing.txt requirements/testing.in

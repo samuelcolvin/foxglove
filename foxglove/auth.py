@@ -86,7 +86,6 @@ def _check_password(password: SecretBytes, expected_hash: Optional[str]) -> bool
     elif b'\x00' in password.get_secret_value():
         return False
     else:
-
         return bcrypt.checkpw(password.get_secret_value(), expected_hash.encode())
 
 

@@ -46,7 +46,6 @@ async def test_cloudflare_ok_header(create_request, glove):
 
 
 async def test_cloudflare_ok_client(create_request, glove):
-
     req: Request = create_request(client_addr='162.158.186.183')
     m = CloudflareCheckMiddleware(create_request.app)
 

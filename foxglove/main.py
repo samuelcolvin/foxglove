@@ -1,11 +1,13 @@
 import asyncio
 import os
+from contextlib import asynccontextmanager
 from typing import Literal
 
 import arq
 import httpx
 from buildpg.asyncpg import BuildPgPool
-from pydantic.env_settings import BaseSettings as PydanticBaseSettings
+from fastapi import FastAPI
+from pydantic_settings import BaseSettings as PydanticBaseSettings
 from uvicorn.importer import ImportFromStringError, import_from_string
 
 from .db import create_pg_pool
@@ -19,6 +21,12 @@ class Glove:
     _http: httpx.AsyncClient
     pg: BuildPgPool
     redis: arq.ArqRedis
+
+    @asynccontextmanager
+    async def lifespan(self, app: FastAPI):
+        await self.startup()
+        yield
+        await self.shutdown()
 
     async def startup(self, *, run_migrations: Literal[True, False, 'unless-test-mode'] = 'unless-test-mode') -> None:
         from .logs import setup_sentry
