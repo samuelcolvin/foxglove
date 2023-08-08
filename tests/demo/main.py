@@ -48,8 +48,7 @@ add_middleware(PgMiddleware)
 
 app = FastAPI(
     title='Foxglove Testing',
-    on_startup=[glove.startup],
-    on_shutdown=[glove.shutdown],
+    lifespan=glove.lifespan,
     middleware=middleware,
     docs_url=None,
     redoc_url='/docs',
@@ -97,7 +96,6 @@ def worker(settings: BaseSettings):
 
 async def aworker(settings: BaseSettings):
     async with glove.context():
-
         async with glove.pg.acquire() as conn:
             v = await conn.fetchval('select 4^4')
         logger.info('running demo worker function, ans: %0.0f', v)
@@ -105,7 +103,7 @@ async def aworker(settings: BaseSettings):
 
 
 class CheckRecaptchaModal(BaseModel):
-    recaptcha_token: Optional[str]
+    recaptcha_token: Optional[str] = None
 
 
 @app.post('/captcha-check/')

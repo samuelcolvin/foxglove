@@ -28,7 +28,7 @@ def fix_settings():
 
 @pytest.fixture(scope='session', name='alt_settings')
 def fix_alt_settings(settings: Settings):
-    return settings.copy(update=dict(pg_dsn='postgres://postgres@localhost:5432/foxglove_demo_alt'))
+    return settings.model_copy(update=dict(pg_dsn='postgres://postgres@localhost:5432/foxglove_demo_alt'))
 
 
 @pytest.fixture(name='db_conn_global')

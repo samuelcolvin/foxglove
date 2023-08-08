@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Pattern
 from urllib.parse import urlparse
 
-from pydantic import BaseSettings as PydanticBaseSettings, validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic_settings import BaseSettings as PydanticBaseSettings, SettingsConfigDict
 from starlette.applications import Starlette
 from uvicorn.importer import import_from_string
 
@@ -36,13 +37,19 @@ __all__ = ('BaseSettings',)
 
 
 class BaseSettings(PydanticBaseSettings):
-    dev_mode: bool = False
+    model_config = SettingsConfigDict(
+        validate_assignment=True,
+    )
+
+    dev_mode: bool = Field(default=False, validation_alias=AliasChoices('dev_mode', 'foxglove_dev_mode'))
     test_mode: bool = False
-    release: Optional[str] = None
-    environment: str = 'dev'
+    release: Optional[str] = Field(
+        default=None, validation_alias=AliasChoices('commit', 'release', 'heroku_slug_commit', 'render_git_commit')
+    )
+    environment: str = Field(default='dev', validation_alias=AliasChoices('env', 'environment'))
     sentry_dsn: Optional[str] = None
     log_level: str = 'INFO'
-    origin: str = None
+    origin: Optional[str] = None
 
     bcrypt_rounds: int = 14
 
@@ -57,15 +64,17 @@ class BaseSettings(PydanticBaseSettings):
 
     sql_path: Path = 'models.sql'
     template_dir: Optional[Path] = None
-    pg_dsn: Optional[str] = pg_dsn_default
+    pg_dsn: Optional[str] = Field(default=pg_dsn_default, validation_alias=AliasChoices('pg_dsn', 'database_url'))
     # eg. the db already exists on heroku and never has to be created
-    pg_db_exists = False
+    pg_db_exists: bool = False
     pg_pool_min_size: int = 10
     pg_pool_max_size: int = 10
     pg_server_settings: Optional[Dict[str, str]] = {'jit': 'off'}
     pg_migrations: bool = False
 
-    redis_settings: Optional[RedisSettings] = redis_settings_default
+    redis_settings: Optional[RedisSettings] = Field(
+        default=redis_settings_default, validation_alias=AliasChoices('redis_settings', 'rediscloud_url', 'redis_url')
+    )
     port: int = 8000
 
     # secrets.token_hex() is used to avoid a public default value ever being used in production
@@ -74,17 +83,17 @@ class BaseSettings(PydanticBaseSettings):
 
     locale: Optional[str] = None
 
-    http_client_timeout = 10
+    http_client_timeout: int = 10
 
     csrf_ignore_paths: List[Pattern] = []
     csrf_upload_paths: List[Pattern] = []
     csrf_cross_origin_paths: List[Pattern] = []
     cross_origin_origins: List[Pattern] = []
 
-    recaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
+    recaptcha_url: str = 'https://www.google.com/recaptcha/api/siteverify'
     # this is the recaptcha test key, you'll need to change it for production, see
     # https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha-what-should-i-do
-    recaptcha_secret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+    recaptcha_secret: str = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
 
     @property
     def sql(self):
@@ -109,7 +118,7 @@ class BaseSettings(PydanticBaseSettings):
     def pg_port(self):
         return self._pg_dsn_parsed.port
 
-    @validator('redis_settings', always=True, pre=True)
+    @field_validator('redis_settings', mode='before')
     def parse_redis_settings(cls, v):
         if v is None:
             return
@@ -118,7 +127,7 @@ class BaseSettings(PydanticBaseSettings):
             raise RuntimeError(f'arq must be installed to use redis, redis_settings set to {v!r}')
         return RedisSettings.from_dsn(v)
 
-    @validator('pg_db_exists', always=True)
+    @field_validator('pg_db_exists')
     def pg_db_exists_heroku(cls, v: bool) -> bool:
         """
         pg_db_exists should be true by default on heroku, but not if PG_DB_EXISTS is set to false.
@@ -128,13 +137,13 @@ class BaseSettings(PydanticBaseSettings):
         else:
             return 'DYNO' in os.environ or 'HEROKU_SLUG_COMMIT' in os.environ
 
-    @validator('environment', always=True)
-    def set_environment(cls, v: str, values: Dict[str, Any]) -> str:
-        if values.get('dev_mode'):
-            return 'dev'
-        return v
+    @model_validator(mode='before')
+    def set_environment(cls, value: Dict[str, Any], handler) -> str:
+        if value.get('dev_mode'):
+            value['environment'] = 'dev'
+        return value
 
-    @validator('sentry_dsn', always=True)
+    @field_validator('sentry_dsn')
     def set_sentry_dsn(cls, sentry_dsn: Optional[str]) -> Optional[str]:
         if sentry_dsn in ('', '-'):
             # thus setting an environment variable of "-" means no sentry
@@ -142,18 +151,9 @@ class BaseSettings(PydanticBaseSettings):
         else:
             return sentry_dsn
 
-    @validator('release', always=True)
+    @field_validator('release')
     def set_release(cls, release: Optional[str]) -> Optional[str]:
         if release:
             return release[:7]
         else:
             return release
-
-    class Config:
-        fields = {
-            'pg_dsn': {'env': 'DATABASE_URL'},
-            'redis_settings': {'env': ['REDISCLOUD_URL', 'REDIS_URL']},
-            'dev_mode': {'env': ['foxglove_dev_mode']},
-            'environment': {'env': ['ENV', 'ENVIRONMENT']},
-            'release': {'env': ['COMMIT', 'RELEASE', 'HEROKU_SLUG_COMMIT', 'RENDER_GIT_COMMIT']},
-        }

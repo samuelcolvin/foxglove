@@ -90,7 +90,7 @@ def static_url(context: dict, path: str) -> str:
     request = context['request']
     try:
         static_route_name = context.get('static_route_name', 'static')
-        url = request.url_for(static_route_name, path=path)
+        url = str(request.url_for(static_route_name, path=path))
         if context['dev_mode']:
             url += f'?t={time() * 1000:0.0f}'
         else:
