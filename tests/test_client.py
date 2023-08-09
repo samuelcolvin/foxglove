@@ -1,4 +1,5 @@
 from foxglove.testing import TestClient as Client
+from foxglove.testing.test_client import _MockOriginalResponse
 
 
 def test_index(client: Client):
@@ -97,3 +98,13 @@ def test_null_json_error(client: Client):
     assert client.post_json('/create-user/', {'first_name': 'Samuel\x00', 'last_name': 'Colvin'}, status=400) == {
         'detail': 'There was an error parsing the body'
     }
+
+
+def test_mock_original_response_close():
+    response = _MockOriginalResponse([])
+
+    assert response.isclosed() is False
+
+    response.close()
+
+    assert response.isclosed() is True

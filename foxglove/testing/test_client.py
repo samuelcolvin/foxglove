@@ -73,6 +73,9 @@ class _MockOriginalResponse:
     def isclosed(self) -> bool:
         return self.closed
 
+    def close(self) -> None:
+        self.closed = True
+
 
 class _Upgrade(Exception):
     def __init__(self, session: 'WebSocketTestSession') -> None:
